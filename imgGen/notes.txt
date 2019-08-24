@@ -16,6 +16,7 @@ Two Pass System
 - Second pass
 	* Build the bloom filter by iterating through all files and paths using number
 	  of hash functions and size of filter computed from first pass
+		* Use computed metadata from img generator to iterate over
 		* Add new file by ORing the hashed data with the filter
 	* Append metadata field with info
 		- Size of filter
