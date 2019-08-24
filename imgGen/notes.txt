@@ -33,6 +33,8 @@ File Organization
 	- Initialize filter 	-> Allows for parameters to be passed in specifying size and number hash functions
 	- Add element 		-> Add element to the filter
 	- Remove element	-> Remove an element from a filter (Not supported in Bloom, but in cuckoo it is)
+	
+	// Make specific to each filter, future filters may not need this
 	- Optimize filter	-> Allows for computation of relevant parameters in "first pass" for generating filters
 		- Ex) For bloom filter, just use count of number of files as the parameter and probability desired
 		- May be issue if different return types needed for optimize. Could have a context object
