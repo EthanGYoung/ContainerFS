@@ -18,9 +18,13 @@ package sandbox
 import (
 	"context"
 	"fmt"
-	"os"
+	"io/ioutil"
+    "os"
 	"os/exec"
-	"strconv"
+    "path"
+	"sort"
+    "strconv"
+    "strings"
 	"sync"
 	"syscall"
 	"time"
@@ -324,7 +328,18 @@ func (s *Sandbox) createSandboxProcess(spec *specs.Spec, conf *boot.Config, bund
 		nextFD++
 	}
 
-	// Add the "boot" command to the args.
+    packageFile, err := os.OpenFile(conf.ImgPath, os.O_RDONLY, 0644)
+    if err != nil {
+		return fmt.Errorf("opening package file: %v", err)
+	}
+	defer packageFile.Close()
+	cmd.ExtraFiles = append(cmd.ExtraFiles, packageFile)
+    cmd.Args = append(cmd.Args, "--package-fd="+strconv.Itoa(nextFD))
+	nextFD++
+
+
+
+    // Add the "boot" command to the args.
 	//
 	// All flags after this must be for the boot command
 	cmd.Args = append(cmd.Args, "boot", "--bundle="+bundleDir)
@@ -378,6 +393,26 @@ func (s *Sandbox) createSandboxProcess(spec *specs.Spec, conf *boot.Config, bund
 		nextFD++
 	}
 
+    //Experiemntal Feature: use multiple layers of imgfs to replace gofer.
+    files, err := ioutil.ReadDir(spec.Root.Path)
+    var layers []string
+    for _, file := range files {
+        if strings.HasSuffix(file.Name(), ".img") {
+            layers = append(layers, file.Name())
+        }
+    }
+    // Layers have their order. We assume the layer with lower ascii order is the lower layer. e.g. layer1.img > layer2.img > layer3.img
+    sort.Strings(layers)
+    for _, layer := range layers {
+        layerFile, err := os.OpenFile(path.Join(spec.Root.Path, layer), os.O_RDONLY, 0644)
+        if err != nil {
+		    return fmt.Errorf("opening layer file: %v", err)
+	    }
+        defer layerFile.Close()
+	    cmd.ExtraFiles = append(cmd.ExtraFiles, layerFile)
+	    cmd.Args = append(cmd.Args, "--layer-fds="+strconv.Itoa(nextFD))
+        nextFD++
+    }
 	// The current process' stdio must be passed to the application via the
 	// --stdio-fds flag. The stdio of the sandbox process itself must not
 	// be connected to the same FDs, otherwise we risk leaking sandbox

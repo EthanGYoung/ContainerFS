@@ -169,6 +169,8 @@ type Config struct {
 	// FileAccess indicates how the filesystem is accessed.
 	FileAccess FileAccessType
 
+	ImgPath string
+
 	// Overlay is whether to wrap the root filesystem in an overlay.
 	Overlay bool
 
@@ -177,6 +179,8 @@ type Config struct {
 
 	// LogPackets indicates that all network packets should be logged.
 	LogPackets bool
+
+	PackageFD int
 
 	// Platform is the platform to run on.
 	Platform PlatformType
@@ -222,6 +226,7 @@ func (c *Config) ToFlags() []string {
 		"--debug-log=" + c.DebugLog,
 		"--debug-log-format=" + c.DebugLogFormat,
 		"--file-access=" + c.FileAccess.String(),
+		"--img-path=" + c.ImgPath,
 		"--overlay=" + strconv.FormatBool(c.Overlay),
 		"--network=" + c.Network.String(),
 		"--log-packets=" + strconv.FormatBool(c.LogPackets),

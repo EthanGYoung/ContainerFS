@@ -23,6 +23,7 @@ import (
 	"sync"
 	"sync/atomic"
 	"syscall"
+	"io/ioutil"
 	gtime "time"
 
 	specs "github.com/opencontainers/runtime-spec/specs-go"
@@ -82,11 +83,16 @@ type Loader struct {
 
 	watchdog *watchdog.Watchdog
 
+	packageFD int
+
 	// stdioFDs contains stdin, stdout, and stderr.
 	stdioFDs []int
 
 	// goferFDs are the FDs that attach the sandbox to the gofers.
 	goferFDs []int
+
+	// experimental feature: container FS
+	layerFDs []int
 
 	// spec is the base configuration for the root container.
 	spec *specs.Spec
@@ -157,6 +163,9 @@ type Args struct {
 	// GoferFDs is an array of FDs used to connect with the Gofer.
 	GoferFDs []int
 	// StdioFDs is the stdio for the application.
+
+	PackageFD int
+
 	StdioFDs []int
 	// Console is set to true if using TTY.
 	Console bool
@@ -167,6 +176,8 @@ type Args struct {
 	TotalMem uint64
 	// UserLogFD is the file descriptor to write user logs to.
 	UserLogFD int
+	// experimental feature: the file descriptors for each layer in container fs
+	LayerFDs []int
 }
 
 // New initializes a new kernel loader configured by spec.
@@ -303,6 +314,8 @@ func New(args Args) (*Loader, error) {
 		watchdog:     watchdog,
 		spec:         args.Spec,
 		goferFDs:     args.GoferFDs,
+		packageFD:    args.PackageFD,
+		layerFDs:     args.LayerFDs,
 		stdioFDs:     args.StdioFDs,
 		rootProcArgs: procArgs,
 		sandboxID:    args.ID,
@@ -454,6 +467,16 @@ func (l *Loader) run() error {
 		}
 	}
 
+	files, err := ioutil.ReadDir("/")
+
+	if err != nil {
+		return fmt.Errorf("os_module test err:: %v", err)
+	}
+
+	for _, f := range files {
+		log.Debugf("os_module files: " + f.Name())
+	}
+
 	l.mu.Lock()
 	defer l.mu.Unlock()
 
@@ -488,6 +511,7 @@ func (l *Loader) run() error {
 			l.conf,
 			l.stdioFDs,
 			l.goferFDs,
+			l.layerFDs,
 			l.console,
 			l.rootProcArgs.Credentials,
 			l.rootProcArgs.Limits,
@@ -604,6 +628,7 @@ func (l *Loader) startContainer(k *kernel.Kernel, spec *specs.Spec, conf *Config
 		conf,
 		stdioFDs,
 		goferFDs,
+		l.layerFDs,
 		false,
 		creds,
 		procArgs.Limits,

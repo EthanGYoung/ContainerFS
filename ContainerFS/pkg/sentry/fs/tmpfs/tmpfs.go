@@ -82,6 +82,7 @@ var _ fs.InodeOperations = (*Dir)(nil)
 
 // NewDir returns a new directory.
 func NewDir(ctx context.Context, contents map[string]*fs.Inode, owner fs.FileOwner, perms fs.FilePermissions, msrc *fs.MountSource) *fs.Inode {
+
 	d := &Dir{
 		ramfsDir: ramfs.NewDir(ctx, contents, owner, perms),
 		kernel:   kernel.KernelFromContext(ctx),

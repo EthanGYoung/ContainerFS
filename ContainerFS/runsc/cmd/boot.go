@@ -45,6 +45,8 @@ type Boot struct {
 	// deviceFD is the file descriptor for the platform device file.
 	deviceFD int
 
+	packageFD int
+
 	// ioFDs is the list of FDs used to connect to FS gofers.
 	ioFDs intFlags
 
@@ -83,6 +85,9 @@ type Boot struct {
 
 	// pidns is set if the sanadbox is in its own pid namespace.
 	pidns bool
+
+	// experimental feature, a list of layers in container fs
+	layerFDs intFlags
 }
 
 // Name implements subcommands.Command.Name.
@@ -117,6 +122,8 @@ func (b *Boot) SetFlags(f *flag.FlagSet) {
 	f.IntVar(&b.userLogFD, "user-log-fd", 0, "file descriptor to write user logs to. 0 means no logging.")
 	f.IntVar(&b.startSyncFD, "start-sync-fd", -1, "required FD to used to synchronize sandbox startup")
 	f.IntVar(&b.mountsFD, "mounts-fd", -1, "mountsFD is the file descriptor to read list of mounts after they have been resolved (direct paths, no symlinks).")
+	// experimental feature
+	f.Var(&b.layerFDs, "layer-fds", "list of FDs containing different layer files for container FS")
 }
 
 // Execute implements subcommands.Command.Execute.  It starts a sandbox in a
@@ -215,12 +222,15 @@ func (b *Boot) Execute(_ context.Context, f *flag.FlagSet, args ...interface{}) 
 		ControllerFD: b.controllerFD,
 		DeviceFD:     b.deviceFD,
 		GoferFDs:     b.ioFDs.GetArray(),
+		PackageFD:    conf.PackageFD,
+        LayerFDs:     b.layerFDs.GetArray(),
 		StdioFDs:     b.stdioFDs.GetArray(),
 		Console:      b.console,
 		NumCPU:       b.cpuNum,
 		TotalMem:     b.totalMem,
 		UserLogFD:    b.userLogFD,
 	}
+	log.Infof("packageFD: %v", bootArgs.PackageFD)
 	l, err := boot.New(bootArgs)
 	if err != nil {
 		Fatalf("creating loader: %v", err)
