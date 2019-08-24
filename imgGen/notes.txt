@@ -1,0 +1,25 @@
+Implementing Bloom Filters in imgGen
+
+* Each layer needs a precomputed bloom filter
+	* Need to precompute the optimal number size of filter
+* Add the filter to the metadata at the end of the file
+* Keys are the absolute path as a string (Absolute relative to root of img)
+
+
+Two Pass System
+
+- First pass
+	* Determine number of elements in the bloom filter by iterating through
+	  included files and counting total number
+	* Compute the number of hash functions (k) needed to minimize false positive rate
+
+- Second pass
+	* Build the bloom filter by iterating through all files and paths using number
+	  of hash functions and size of filter computed from first pass
+		* Add new file by ORing the hashed data with the filter
+	* Append metadata field with info
+		- Size of filter
+		- Actual filter data
+
+* If this process takes a long time, can speed up by parallelizing computation
+	- Since static directory of files
