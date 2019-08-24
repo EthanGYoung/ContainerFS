@@ -8,7 +8,7 @@ Implementing Bloom Filters in imgGen
 
 Two Pass System
 
-- First pass
+- First pass -> Can be computed when initial img created (Count files - Assumming immutable file paths)
 	* Determine number of elements in the bloom filter by iterating through
 	  included files and counting total number
 	* Compute the number of hash functions (k) needed to minimize false positive rate
@@ -24,3 +24,17 @@ Two Pass System
 
 * If this process takes a long time, can speed up by parallelizing computation
 	- Since static directory of files
+
+
+File Organization
+* Create new dir called "Filters", allowing us to add multiple implementations of filters
+* Filter Type 
+- Methods
+	- Initialize filter 	-> Allows for parameters to be passed in specifying size and number hash functions
+	- Add element 		-> Add element to the filter
+	- Remove element	-> Remove an element from a filter (Not supported in Bloom, but in cuckoo it is)
+	- Optimize filter	-> Allows for computation of relevant parameters in "first pass" for generating filters
+		- Ex) For bloom filter, just use count of number of files as the parameter and probability desired
+		- May be issue if different return types needed for optimize. Could have a context object
+
+* Optimize filter called in first pass
