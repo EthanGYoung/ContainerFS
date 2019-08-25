@@ -11,10 +11,10 @@ type Filter interface {
 	// 
 	Initialize()
 
-	// AddElement adds an element to the filter
+	// AddElement adds an element to the filter by hashing the element into the filter
 	//
-	// 
-	AddElement()
+	// elem:	Represents an element to add to the bloom filter 
+	AddElement(elem []byte)
 
 	// RemoveElement removes an element from the filter
 	//
@@ -22,7 +22,7 @@ type Filter interface {
 	RemoveElement()
 
 	// TestElement checks if the specific element exists in data structure
-	TestElement()
+	TestElement(elem []byte) bool
 
 }
 
