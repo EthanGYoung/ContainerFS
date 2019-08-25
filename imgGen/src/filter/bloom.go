@@ -111,8 +111,11 @@ func (b *BloomFilter) TestElement(elem []byte) bool {
 
 	intHash := h1
 
+	// TODO: Look into this, may be perf issue..
+	var testFilter = make([]bool, b.FilterSize)
+
 	// Create a test bit array
-	testFilter := b.BitSet
+	copy(testFilter, b.BitSet)
 
 	// Set bits in bitset to represent added element
 	for i:=0; i < int(b.NumHashes); i++ {

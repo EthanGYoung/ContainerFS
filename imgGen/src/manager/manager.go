@@ -89,7 +89,7 @@ type ZarManager struct {
 
 type DirInfo struct {
         Name string
-        ModTime int64 
+        ModTime int64
 }
 
 // WalkDir implemented Manager.WalkDir
