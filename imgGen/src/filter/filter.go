@@ -21,5 +21,8 @@ type Filter interface {
 	//
 	RemoveElement()
 
+	// TestElement checks if the specific element exists in data structure
+	TestElement()
+
 }
 
