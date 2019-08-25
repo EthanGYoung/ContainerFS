@@ -68,8 +68,8 @@ type FileMetadata struct {
         // If the file is a symlink, this entry is used for link info
         Link string
 
-		// File modification time
-        ModTime int64 
+	// File modification time
+        ModTime int64
 
         // Type indicated the type of a specific file (dir, symlink or regular file)
         Type fileType

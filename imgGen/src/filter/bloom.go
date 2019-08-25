@@ -29,6 +29,14 @@ type BloomFilter struct {
 	BitSet []bool
 }
 
+// BFMetadata is a struct that depicts what will get written to the image metadata for the bloomfilter
+type BFMetadata struct {
+	// Name represents the name of the filter used for this layer. Must be same as in ContainerFS
+	Name string
+
+	BF *BloomFilter
+}
+
 // Initialize implements Filter.Initialize. Assumes b.NumElem is set to number of expected elements
 // and FPProb is set
 func (b *BloomFilter) Initialize() {
@@ -87,6 +95,7 @@ func (b *BloomFilter) hashElement(elem []byte) (uint64, uint64) {
 func (b *BloomFilter) setBit(position uint64) {
 	b.BitSet[position] = true
 }
+
 // RemoveElement removes an element from the filter
 //
 //

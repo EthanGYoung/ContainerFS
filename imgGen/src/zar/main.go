@@ -12,6 +12,7 @@ import (
 
 	// TODO: Change paths to be remotely imported from github
 	"manager"
+	"filter"
 )
 
 // writeImage acts as the "main" method by creating and initializing the manager,
