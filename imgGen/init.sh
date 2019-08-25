@@ -10,6 +10,6 @@ sudo mv go /usr/local
 
 # Set up environment
 export GOROOT=/usr/local/go
-export GOPATH=$HOME/ContainerFS/ContainerFS
+export GOPATH=$HOME/ContainerFS/imgGen
 
 export PATH=$GOPATH/bin:$GOROOT/bin:$PATH

@@ -22,6 +22,8 @@ type Filter interface {
 	RemoveElement()
 
 	// TestElement checks if the specific element exists in data structure
+	//
+	// Return: False if not present in filter, true if possibly present
 	TestElement(elem []byte) bool
 
 }

@@ -5,8 +5,8 @@ import (
 	"math"
 )
 
-// Hardcoded hash functions
-var HASH murmur3.Hash128 = murmur3.New128()
+const(
+)
 
 // BloomFilter is a struct for creating a Bloom filter for an image file. A
 // A Bloom filter specifies whether a specific file path is "definitily" not
@@ -17,13 +17,13 @@ type BloomFilter struct {
 	FPProb float64
 
 	// NumHashes represents the number of hash functions for this bloom filter (k)
-	NumHashes int64
+	NumHashes uint64
 
 	// NumElem represents the number of elements in this filter (n)
-	NumElem int64
+	NumElem uint64
 
 	// FilterSize represents the number of bits in this filter (m)
-	FilterSize int64
+	FilterSize uint64
 
 	// BitSet is the array of bits that implements a bloom filter
 	BitSet []bool
@@ -50,24 +50,21 @@ func (b *BloomFilter) Initialize() {
 // calcFilterSize calculates the optimal size of bit array given prob and elements
 // Assumes FPProb and NumElem is set
 // m = ceil((n*log(p)) / log(1 / pow(2, log(2))) 
-func (b *BloomFilter) calcFilterSize() int64 {
-	return int64(math.Ceil((float64(b.NumElem) * math.Log(b.FPProb)) / math.Log(1 / math.Pow(2, math.Log(2)))))
+func (b *BloomFilter) calcFilterSize() uint64 {
+	return uint64(math.Ceil((float64(b.NumElem) * math.Log(b.FPProb)) / math.Log(1 / math.Pow(2, math.Log(2)))))
 }
 
 // calcNumHashes calculates the aptimal number of hashes given the filter size and the number of elements
 // Assumes FilterSize and NumElem set
 // k = round((m / n) * log(2))
-func (b *BloomFilter) calcNumHashes() int64 {
-	return int64(math.Round(float64(b.FilterSize / b.NumElem) * math.Log(2)))
+func (b *BloomFilter) calcNumHashes() uint64 {
+	return uint64(math.Round(float64(b.FilterSize / b.NumElem) * math.Log(2)))
 }
 
 // AddElement implements Filter.AddElement
 func (b *BloomFilter) AddElement(elem []byte) {
 	// Get the hashed value of the element
-	hash := b.hashElement(elem)
-
-	h1 := int64(hash[0:64]) // First 64 bits
-	h2 := int64(hash[64:128]) // Second 64 bits
+	h1, h2 := b.hashElement(elem)
 
 	intHash := h1
 
@@ -75,19 +72,20 @@ func (b *BloomFilter) AddElement(elem []byte) {
 	for i:=0; i < int(b.NumHashes); i++ {
 		intHash += (b.NumHashes*h2)
 		bitToSet := intHash % b.FilterSize
-		b.setBits(bitToSet)
+		b.setBit(bitToSet)
 	}
 
 }
 
-// hashElement hashes the elem passed in based on the global HASH variable
-func (b *BloomFilter) hashElement(elem []byte) int64 {
-	return HASH(elem)
+// hashElement hashes the elem passed in based on the murmur hash function
+// TODO: Unsure if Sum128 is correct
+func (b *BloomFilter) hashElement(elem []byte) (uint64, uint64) {
+	return murmur3.Sum128(elem)
 }
 
-// setBits will set the bits in bits to 1 in the bloom filter's bitset
-func (b *BloomFilter) setBits(bits int64) {
-	b.BitSet |= bits
+// setBits will set bit at position to true
+func (b *BloomFilter) setBit(position uint64) {
+	b.BitSet[position] = true
 }
 // RemoveElement removes an element from the filter
 //
@@ -97,25 +95,34 @@ func (b *BloomFilter) RemoveElement() {
 }
 
 // TestElement implements Filter.TestElement
-func (b *BloomFilter) TestElement() bool {
+func (b *BloomFilter) TestElement(elem []byte) bool {
 	// TODO: Make this modular with add element
 	// Get the hashed value of the element
-	hash := b.hashElement(elem)
-	h1 := int64(hash[0:64])	// First 64 bits
-	h2 := int64(hash[64:128]) // Second 64 bits
+	h1, h2 := b.hashElement(elem)
 
 	intHash := h1
 
 	// Create a test bit array
-	testFilter = bool[b.FilterSize]
+	testFilter := b.BitSet
 
 	// Set bits in bitset to represent added element
-	for i:=0; i < b.NumHashes; i++ {
+	for i:=0; i < int(b.NumHashes); i++ {
 		intHash += (b.NumHashes*h2)
 		bitToSet := intHash % b.FilterSize
-		testFilter |= bitToSet
+		testFilter[bitToSet] = true
 	}
 
-	// Test if found by checking that all bits set in BitSet
-	return ((testFilter & b.BitSet) == testFilter)
+	// Test if found by checking that all bits set are same as original
+	return b.checkBitSetEquality(testFilter)
+}
+
+// checkBitSetEquality checks if a test bloom filter equals the current bloom filter
+func (b *BloomFilter) checkBitSetEquality(test []bool) (bool) {
+	if (len(test) != len(b.BitSet)) { return false }
+
+	for i:=0; i < int(b.FilterSize); i++ {
+		if (b.BitSet[i] != test[i]) { return false }
+	}
+
+	return true
 }
