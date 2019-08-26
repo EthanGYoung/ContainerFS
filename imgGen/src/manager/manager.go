@@ -96,7 +96,6 @@ type ZarManager struct {
 	Statistics *stats.ImgStats
 
 	// Filter is a filter used for this image file
-	// TODO: Chenged to non-pointer, but is that correct?
 	Filter filter.Filter
 }
 
@@ -270,6 +269,7 @@ func (z *ZarManager) constructFilter() {
 
 		switch MetaType := z.Metadata[i].Type; MetaType {
 		case (RegularFile):
+			fmt.Println("File")
 			// Add to filter
 			z.Filter.AddElement([]byte(path + "/" + name))
 		case (Directory):

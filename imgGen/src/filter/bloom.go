@@ -42,7 +42,7 @@ type BFMetadata struct {
 // and FPProb is set
 func (b *BloomFilter) Initialize() {
 	// Check for error conditions
-	if (b.NumElem < 0) {
+	if (b.NumElem < 1) {
 		// Return error
 		return
 	}

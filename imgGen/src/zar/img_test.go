@@ -8,17 +8,24 @@ import (
 	"strconv"
 )
 
+// TODO: Move this to the manager tests
 
+// TestFilterConstruction tests that, given the metadata, the filter can be accurately constructed
 func TestFilterConstruction(t *testing.T) {
 	var DummyMetadata = []manager.FileMetadata {
-
+		// Structure
+		// root
+		//	apples.txt
+		//	Groceries
+		//	..
+		//	OtherApples.txt
 		// Create dummy metadata (Dont care about Begin, End, Link, ModTime
 		manager.FileMetadata{
 			Name:"root",
 			Type:manager.Directory,
 		},
 		manager.FileMetadata{
-			Name:"apples.txt",
+			Name:"Apples.txt",
 			Type:manager.RegularFile,
 		},
 		manager.FileMetadata{
@@ -45,23 +52,34 @@ func TestFilterConstruction(t *testing.T) {
 		NumSymLinks:1,
 		NumDirs:2,
 	}
-	var filter = &filter.BloomFilter{} // Default to BloomFilter
+	var filt = &filter.BloomFilter{NumElem:5} // Default to BloomFilter
 
 	z = &manager.ZarManager{
 		Statistics	: stats,
-		Filter		: filter,
+		Filter		: filt,
 		Metadata	: DummyMetadata,
 	}
 
 	// Create the bloom filter
 	z.GenerateFilter()
 
-	path:="/root/Apples.txt"
+	path:="root/Apples.txt"
 	exp:=true
 	if z.Filter.TestElement([]byte(path)) {
-		t.Errorf("z.Filter.TestElement([]byte('" + path + " ') return " + strconv.FormatBool(exp) + "  when it should have returned " + strconv.FormatBool(!exp))
+		t.Errorf("z.Filter.TestElement([]byte('" + path + "') return " + strconv.FormatBool(!exp) + "  when it should have returned " + strconv.FormatBool(exp))
 	}
 
+	path="root/OtherApples.txt"
+	exp=true
+	if z.Filter.TestElement([]byte(path)) {
+		t.Errorf("z.Filter.TestElement([]byte('" + path + "') return " + strconv.FormatBool(!exp) + "  when it should have returned " + strconv.FormatBool(exp))
+	}
+
+	path="root/Oranges.txt"
+	exp=false
+	if z.Filter.TestElement([]byte(path)) {
+		t.Errorf("z.Filter.TestElement([]byte('" + path + "') return " + strconv.FormatBool(!exp) + "  when it should have returned " + strconv.FormatBool(exp))
+	}
 }
 
 // TODO: TestStats
