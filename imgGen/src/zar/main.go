@@ -2,17 +2,17 @@ package main
 
 import (
 	"bytes"
-	"flag"
-	"fmt"
 	"encoding/binary"
 	"encoding/gob"
+	"flag"
+	"fmt"
 	"log"
 	"os"
 	"syscall"
 
 	// TODO: Change paths to be remotely imported from github
 	"manager"
-	"filter"
+	"stats"
 )
 
 // writeImage acts as the "main" method by creating and initializing the manager,
@@ -28,7 +28,13 @@ func writeImage(dir string, output string, pageAlign bool, config bool, configPa
 	var z *manager.ZarManager
 	var c *manager.CManager
 
-	z = &manager.ZarManager{PageAlign:pageAlign}
+	// Initializes all fields to 0
+	var stats = &stats.ImgStats{}
+
+	z = &manager.ZarManager{
+		PageAlign	: pageAlign,
+		Statistics	: stats,
+	}
 
 	// Create the manager
 	// TODO: Make this not redundant code
@@ -40,7 +46,7 @@ func writeImage(dir string, output string, pageAlign bool, config bool, configPa
 		}
 
 		c = &manager.CManager{
-			ZarManager		: z,
+			ZarManager	: z,
 			Format		: format,
 			ConfigFile	: f,
 		}

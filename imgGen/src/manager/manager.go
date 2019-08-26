@@ -11,6 +11,7 @@ import (
 	"path"
 
 	"fileio/writer"
+	"stats"
 )
 
 // fileType is an integer representating the file type (RegularFile, Directory, Symlink)
@@ -85,6 +86,9 @@ type ZarManager struct {
 
         // Metadata is a list of FileMetadata structs indicating start and end of directories and files
         Metadata []FileMetadata
+
+	// Statistics is a ImgStats struct that tracks relevant statistics for the image file
+	Statistics *stats.ImgStats
 }
 
 type DirInfo struct {
@@ -154,11 +158,13 @@ func (z *ZarManager) IncludeFolderBegin(name string, mod_time int64) {
                     End     : -1,
                     Name    : name,
                     Type    : Directory,
-                    ModTime	: mod_time,
+                    ModTime : mod_time,
         }
 
         // Add to the image's Metadata at end
         z.Metadata = append(z.Metadata, *h)
+
+	z.Statistics.AddDir()
 }
 
 // IncludeFolderEnd implements IncludeFolderEnd
@@ -192,6 +198,8 @@ func (z *ZarManager) IncludeSymlink(name string, link string, mod_time int64) {
                         ModTime : mod_time,
         }
         z.Metadata = append(z.Metadata, *h)
+
+	z.Statistics.AddSymLink()
 }
 
 // IncludeFile implements Manager.IncludeFile
@@ -219,6 +227,8 @@ func (z *ZarManager) IncludeFile(fn string, basedir string, mod_time int64) (int
                         ModTime : mod_time,
         }
         z.Metadata = append(z.Metadata, *h)
+
+	z.Statistics.AddFile()
 
         return real_end, err
 }
