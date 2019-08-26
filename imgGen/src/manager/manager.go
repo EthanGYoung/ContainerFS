@@ -92,6 +92,9 @@ type ZarManager struct {
         // Metadata is a list of FileMetadata structs indicating start and end of directories and files
         Metadata []FileMetadata
 
+	// FilterMetadata is a struct refering to info about the bloom filter
+	FilterMetadata filter.FilterMetadata
+
 	// Statistics is a ImgStats struct that tracks relevant statistics for the image file
 	Statistics *stats.ImgStats
 
@@ -250,6 +253,13 @@ func (z *ZarManager) GenerateFilter() {
 
 	// Construct filter
 	z.constructFilter()
+
+	// Create FilterMetadata
+	z.FilterMetadata = filter.FilterMetadata{
+		Active:true,
+		Name:"BloomFilter",
+		Filter:z.Filter,
+	}
 }
 
 // ConstructFilter initializes a filter by looping over FileMetadata
@@ -290,6 +300,7 @@ func (z *ZarManager) constructFilter() {
 }
 
 // TODO: Is gob the best choice here?
+// TODO: In future, can this be laid out as the struct, and directly mapped into memory?
 // WriteHeader implements Manager.WriteHeader
 func (z *ZarManager) WriteHeader() error {
         headerLoc := z.Writer.Count     // Offset for Metadata in image file
@@ -303,7 +314,17 @@ func (z *ZarManager) WriteHeader() error {
         // Write location of Metadata to end of file
         z.Writer.WriteInt64(int64(headerLoc))
 
-        if err := z.Writer.Close(); err != nil {
+	// Write filter metadata to file
+        filterLoc := z.Writer.Count     // Offset for Metadata in image file
+        fmt.Printf("filter location: %v bytes\n", filterLoc)
+
+        fmt.Println("current FilterMetadata:", z.FilterMetadata)
+        mEnc.Encode(z.FilterMetadata)
+
+	// Write location of Metadata to end of file
+        z.Writer.WriteInt64(int64(filterLoc))
+
+	if err := z.Writer.Close(); err != nil {
                 log.Fatalf("can't close zar file: %v", err)
         }
         return nil

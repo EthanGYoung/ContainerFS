@@ -28,3 +28,14 @@ type Filter interface {
 
 }
 
+// FilterMetadata is a struct that depicts what will get written to the image metadata for a filter
+type FilterMetadata struct {
+	// Active indicates whether or not a bloom filter is enforced for this layer
+	Active bool
+
+	// Name represents the name of the filter used for this layer. Must be same as in ContainerFS
+	Name string
+
+	// Filter is the filter associated with this layer
+	Filter Filter
+}
