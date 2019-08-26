@@ -6,6 +6,7 @@ import (
 )
 
 const(
+	DEFAULT_PROB = 0.000001
 )
 
 // BloomFilter is a struct for creating a Bloom filter for an image file. A
@@ -45,6 +46,9 @@ func (b *BloomFilter) Initialize() {
 		// Return error
 		return
 	}
+
+	// Initialize FPProb
+	if (b.FPProb == 0) { b.FPProb = DEFAULT_PROB }
 
 	// Compute filter size and initialize bitarray
 	b.FilterSize = b.calcFilterSize()

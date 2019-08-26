@@ -1,49 +1,67 @@
-
 package img_test
 
 import (
 	"filter"
+	"manager"
 	"testing"
+	"stats"
+	"strconv"
 )
 
 
 func TestFilterConstruction(t *testing.T) {
+	var DummyMetadata = []manager.FileMetadata {
+
+		// Create dummy metadata (Dont care about Begin, End, Link, ModTime
+		manager.FileMetadata{
+			Name:"root",
+			Type:manager.Directory,
+		},
+		manager.FileMetadata{
+			Name:"apples.txt",
+			Type:manager.RegularFile,
+		},
+		manager.FileMetadata{
+			Name:"Groceries",
+			Type:manager.Directory,
+		},
+		manager.FileMetadata{
+			Name:"..",
+			Type:manager.Directory,
+		},
+		manager.FileMetadata{
+			Name:"OtherApples.txt",
+			Type:manager.Symlink,
+		},
+	}
+
+
+	// Copying beginning of writeImage in main.go
+	var z *manager.ZarManager
+
+	// Initializes all fields to 0
+	var stats = &stats.ImgStats{
+		NumFiles:2,
+		NumSymLinks:1,
+		NumDirs:2,
+	}
+	var filter = &filter.BloomFilter{} // Default to BloomFilter
+
+	z = &manager.ZarManager{
+		Statistics	: stats,
+		Filter		: filter,
+		Metadata	: DummyMetadata,
+	}
+
+	// Create the bloom filter
+	z.GenerateFilter()
+
+	path:="/root/Apples.txt"
+	exp:=true
+	if z.Filter.TestElement([]byte(path)) {
+		t.Errorf("z.Filter.TestElement([]byte('" + path + " ') return " + strconv.FormatBool(exp) + "  when it should have returned " + strconv.FormatBool(!exp))
+	}
 
 }
 
-func TestBF(t *testing.T) {
-	// Create BF
-	bf := &filter.BloomFilter{
-		FPProb:0.0001,
-		NumElem:5,
-	}
-
-	bf.Initialize()
-
-	// Confirm follow equations correctly
-	if bf.FilterSize != 96 {
-		t.Errorf("bf.FilterSize != 96, got %d", bf.FilterSize)
-	}
-	if bf.NumHashes != 13 {
-		t.Errorf("bf.NumHashes != 13, got %d", bf.NumHashes)
-	}
-
-	// Test by adding elements
-	bf.AddElement([]byte("hello"))
-	bf.AddElement([]byte("world"))
-	bf.AddElement([]byte("sir"))
-	bf.AddElement([]byte("madam"))
-	bf.AddElement([]byte("io"))
-
-	if !bf.TestElement([]byte("hello")) {
-		t.Errorf("bf.TestElement([]byte('hello') return false when it should have returned true")
-	}
-
-	if !bf.TestElement([]byte("world")) {
-		t.Errorf("bf.TestElement([]byte('world') return false when it should have returned true")
-	}
-
-	if bf.TestElement([]byte("hi")) {
-		t.Errorf("bf.TestElement([]byte('hi') return true when it should have returned false")
-	}
-}
+// TODO: TestStats

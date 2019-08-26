@@ -42,7 +42,7 @@ File Organization
 * Optimize filter called in first pass
 
 Bloom Filter Driver
-	1) File counter during walk of directory to convert to image file
+	x 1) File counter during walk of directory to convert to image file
 		- Create statistics struct that holds this information
 	2) Initialize a Bloom Filter given specific probability and num elements
 	3) Recursively traverse image metadata to create hashed paths for filter

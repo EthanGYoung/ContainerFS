@@ -12,6 +12,7 @@ import (
 
 	// TODO: Change paths to be remotely imported from github
 	"manager"
+	"filter"
 	"stats"
 )
 
