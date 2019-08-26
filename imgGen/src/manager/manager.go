@@ -11,7 +11,9 @@ import (
 	"path"
 
 	"fileio/writer"
+	"filter"
 	"stats"
+	"strings"
 )
 
 // fileType is an integer representating the file type (RegularFile, Directory, Symlink)
@@ -49,6 +51,9 @@ type Manager interface {
         // paramter (basedir)   : name of the current directory relative to root
         // return               : new offset into the image file
         IncludeFile(fn string, basedir string, mod_time int64) (int64, error)
+
+	// GenerateFilter creates a filter based on the files in the img file
+	GenerateFilter()
 
         // WriterHeader writes the Metadata for the imagefile to the end of the image file.
         // The location of the beginning of the header is written at the very end as an int64
@@ -89,6 +94,10 @@ type ZarManager struct {
 
 	// Statistics is a ImgStats struct that tracks relevant statistics for the image file
 	Statistics *stats.ImgStats
+
+	// Filter is a filter used for this image file
+	// TODO: Chenged to non-pointer, but is that correct?
+	Filter filter.Filter
 }
 
 type DirInfo struct {
@@ -231,6 +240,53 @@ func (z *ZarManager) IncludeFile(fn string, basedir string, mod_time int64) (int
 	z.Statistics.AddFile()
 
         return real_end, err
+}
+
+// GenerateFilter implements manager.GenerateFilter
+func (z *ZarManager) GenerateFilter() {
+	// Check type of filter
+
+	// Initialize filter (TODO: Check error)
+	z.Filter.Initialize()
+
+	// Construct filter
+	z.constructFilter()
+}
+
+// ConstructFilter initializes a filter by looping over FileMetadata
+// and adding each file to the filter
+// Algorithm: 
+//	- string to hold current path
+//	- When encounter startDir, append '/dirname' to string
+//	- When encounter file/symlink, hash string + filename into filter
+// 	- When encounter endDir, remove previous name from string
+func (z *ZarManager) constructFilter() {
+	fmt.Println("Constructing Filter")
+
+	var path = ""
+
+	for i:=0; i < len(z.Metadata); i++ {
+		name:=z.Metadata[i].Name
+
+		switch MetaType := z.Metadata[i].Type; MetaType {
+		case (RegularFile):
+			// Add to filter
+			z.Filter.AddElement([]byte(path + "/" + name))
+		case (Directory):
+			// Name = ".." means end of directory
+			if (name == "..") {
+				// Remove dir name at end
+				intPath := strings.Split(path, "/")
+				intPath = intPath[:len(intPath)-1]
+				path = strings.Join(intPath, "/")
+			} else {
+				path += "/" + name
+			}
+		case (Symlink):
+			// Treat like a file, add and hash
+			z.Filter.AddElement([]byte(path + "/" + name))
+		}
+	}
 }
 
 // TODO: Is gob the best choice here?

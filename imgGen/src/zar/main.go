@@ -30,10 +30,12 @@ func writeImage(dir string, output string, pageAlign bool, config bool, configPa
 
 	// Initializes all fields to 0
 	var stats = &stats.ImgStats{}
+	var filter = &filter.BloomFilter{} // Default to BloomFilter
 
 	z = &manager.ZarManager{
 		PageAlign	: pageAlign,
 		Statistics	: stats,
+		Filter		: filter,
 	}
 
 	// Create the manager
@@ -55,6 +57,9 @@ func writeImage(dir string, output string, pageAlign bool, config bool, configPa
 		// Begin recursive walking of directories
 		c.WalkDir(dir, dir, true)
 
+		// Recursively construct a filter for img
+		c.GenerateFilter()
+
 		// Write the metadata to end of file
 		c.WriteHeader()
 	} else {
@@ -62,6 +67,9 @@ func writeImage(dir string, output string, pageAlign bool, config bool, configPa
 
 		// Begin recursive walking of directories
 		z.WalkDir(dir, dir, 0, true)
+
+		// Recursively construct a filter for img
+		c.GenerateFilter()
 
 		// Write the metadata to end of file
 		z.WriteHeader()
