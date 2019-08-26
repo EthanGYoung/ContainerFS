@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"encoding/binary"
+	"encoding/base64"
 	"encoding/gob"
 	"flag"
 	"fmt"
@@ -84,6 +85,7 @@ func writeImage(dir string, output string, pageAlign bool, config bool, configPa
 // parameter (img)	: name of the image file to be read
 // parameter (detail)	: whether to print extra information (file data)
 func readImage(img string, detail bool) error {
+	// Open image file
 	f, err := os.Open(img)
 	if err != nil {
 		log.Fatalf("can't open image file %v, err: %v", img, err)
@@ -108,31 +110,10 @@ func readImage(img string, detail bool) error {
 		fmt.Println("MMAP data:", mmap)
 	}
 
-	// header location is specifed by int64 at last 10 bits (bytes?)
-	headerLoc := mmap[length - 10 : length]
-	fmt.Println("header data:", headerLoc)
+	_, length = processFilterHeader(mmap, length)
 
-	// Setup reader for header data
-	headerReader := bytes.NewReader(headerLoc)
-	n, err := binary.ReadVarint(headerReader)
-	if err != nil {
-		log.Fatalf("can't read header location, err: %v", err)
-	}
-	fmt.Printf("headerLoc: %v bytes\n", n)
+	metadata, _ := processFileHeader(mmap, length)
 
-	var metadata []manager.FileMetadata
-	header := mmap[int(n) : length - 10]
-	fmt.Println("metadata data:", header)
-
-	// Decode the metadata in the header
-	metadataReader := bytes.NewReader(header)
-	dec := gob.NewDecoder(metadataReader)
-	errDec := dec.Decode(&metadata)
-	if errDec != nil {
-		  log.Fatalf("can't decode metadata data, err: %v", errDec)
-			return err
-	}
-	fmt.Println("metadata data decoded:", metadata)
 
 	level := 0
 	space := 2
@@ -166,6 +147,77 @@ func readImage(img string, detail bool) error {
 		}
 	}
 	return nil
+}
+
+
+func processFilterHeader(mmap []byte, length int) (filter.FilterMetadata, int) {
+	fmt.Println("Processing Filter Header")
+
+	// Filter header location is specifed by int64 at last 10 bits (bytes?)
+	headerLoc := mmap[length - 10 : length]
+	fmt.Println("header data:", headerLoc)
+
+	// Setup reader for header data
+	headerReader := bytes.NewReader(headerLoc)
+	n, err := binary.ReadVarint(headerReader)
+	if err != nil {
+		log.Fatalf("can't read header location, err: %v", err)
+	}
+	fmt.Printf("headerLoc: %v bytes\n", n)
+
+	// Decode the metadata in the header
+	var metadata filter.FilterMetadata
+	header := mmap[int(n) : length - 10]
+	fmt.Println("metadata data:", header)
+
+	gob.Register(filter.FilterMetadata{})
+	gob.Register(&filter.BloomFilter{})
+
+	by, err := base64.StdEncoding.DecodeString(string(header))
+	if err != nil { fmt.Println(`failed base64 Decode`, err); }
+	b := bytes.Buffer{}
+	b.Write(by)
+	d := gob.NewDecoder(&b)
+	err = d.Decode(&metadata)
+	if err != nil { fmt.Println(`failed gob Decode`, err); }
+
+	fmt.Println("metadata data decoded:", metadata)
+	return metadata, int(n) // HeaderLoc is the new end of file for finding next offset
+}
+
+func processFileHeader(mmap []byte, length int) ([]manager.FileMetadata, int) {
+	fmt.Println("Processing file header")
+	// Filter header location is specifed by int64 at last 10 bits (bytes?)
+	headerLoc := mmap[length - 10 : length]
+	fmt.Println("header data:", headerLoc)
+
+	// Setup reader for header data
+	headerReader := bytes.NewReader(headerLoc)
+	n, err := binary.ReadVarint(headerReader)
+	if err != nil {
+		log.Fatalf("can't read header location, err: %v", err)
+	}
+	fmt.Printf("headerLoc: %v bytes\n", n)
+
+	// Decode the metadata in the header
+	var metadata []manager.FileMetadata
+	header := mmap[int(n) : length - 10]
+	fmt.Println("metadata data:", header)
+
+	gob.Register(manager.FileMetadata{})
+	gob.Register([]manager.FileMetadata{})
+
+	by, err := base64.StdEncoding.DecodeString(string(header))
+	if err != nil { fmt.Println(`failed base64 Decode`, err); }
+	b := bytes.Buffer{}
+	b.Write(by)
+	d := gob.NewDecoder(&b)
+	err = d.Decode(&metadata)
+	if err != nil { fmt.Println(`failed gob Decode`, err); }
+
+	fmt.Println("metadata data decoded:", metadata)
+	return metadata, int(n) // HeaderLoc is the new end of file for finding next offset
+
 }
 
 func main() {

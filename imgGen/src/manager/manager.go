@@ -16,7 +16,6 @@ import (
 	"filter"
 	"stats"
 	"strings"
-	"strconv"
 )
 
 // fileType is an integer representating the file type (RegularFile, Directory, Symlink)
@@ -347,6 +346,8 @@ func (z *ZarManager) WriteFilterMetadata() {
 
 	// Marshal Metadata
 	gob.Register(filter.FilterMetadata{})
+	gob.Register(&filter.BloomFilter{})
+	//gob.Register(filter.BloomFilter{})
 
 	b := bytes.Buffer{}
 	e := gob.NewEncoder(&b)
