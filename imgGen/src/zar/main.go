@@ -70,7 +70,7 @@ func writeImage(dir string, output string, pageAlign bool, config bool, configPa
 		z.WalkDir(dir, dir, 0, true)
 
 		// Recursively construct a filter for img
-		c.GenerateFilter()
+		z.GenerateFilter()
 
 		// Write the metadata to end of file
 		z.WriteHeader()

@@ -11,13 +11,13 @@ const (
 // stats keeps track of information pertinent to the image file
 type ImgStats struct {
 	// NumFiles represents number of unique files in file (Include symbolic links)
-	NumFiles uint
+	NumFiles uint64
 
 	// NumSymLinks represents number of unique symbolic links in image file
-	NumSymLinks uint
+	NumSymLinks uint64
 
 	// NumDirs represents number of directories in image file
-	NumDirs uint
+	NumDirs uint64
 }
 
 // AddFile increments NumFile in the ImgStats struct

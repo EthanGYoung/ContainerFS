@@ -3,6 +3,8 @@ package manager
 
 
 import (
+	"bytes"
+	"encoding/base64"
 	"encoding/gob"
 	"fmt"
 	"io/ioutil"
@@ -14,6 +16,7 @@ import (
 	"filter"
 	"stats"
 	"strings"
+	"strconv"
 )
 
 // fileType is an integer representating the file type (RegularFile, Directory, Symlink)
@@ -99,7 +102,7 @@ type ZarManager struct {
 	Statistics *stats.ImgStats
 
 	// Filter is a filter used for this image file
-	Filter filter.Filter
+	Filter *filter.BloomFilter
 }
 
 type DirInfo struct {
@@ -246,7 +249,10 @@ func (z *ZarManager) IncludeFile(fn string, basedir string, mod_time int64) (int
 
 // GenerateFilter implements manager.GenerateFilter
 func (z *ZarManager) GenerateFilter() {
-	// Check type of filter
+	// Check type of filter -> Default BloomFilter, later pass in
+
+	// Create initial filter -> Default Bloom, but later have swithc statement
+	z.Filter = &filter.BloomFilter{NumElem:z.Statistics.NumFiles}
 
 	// Initialize filter (TODO: Check error)
 	z.Filter.Initialize()
@@ -257,7 +263,7 @@ func (z *ZarManager) GenerateFilter() {
 	// Create FilterMetadata
 	z.FilterMetadata = filter.FilterMetadata{
 		Active:true,
-		Name:"BloomFilter",
+		Name:"BloomFilter", // Default to BloomFilter
 		Filter:z.Filter,
 	}
 }
@@ -276,10 +282,8 @@ func (z *ZarManager) constructFilter() {
 
 	for i:=0; i < len(z.Metadata); i++ {
 		name:=z.Metadata[i].Name
-
 		switch MetaType := z.Metadata[i].Type; MetaType {
 		case (RegularFile):
-			fmt.Println("File")
 			// Add to filter
 			z.Filter.AddElement([]byte(path + "/" + name))
 		case (Directory):
@@ -299,33 +303,62 @@ func (z *ZarManager) constructFilter() {
 	}
 }
 
-// TODO: Is gob the best choice here?
+// TODO: Is gob the best choice here? Need to use it to encode structs
 // TODO: In future, can this be laid out as the struct, and directly mapped into memory?
+//	YES! Use BinaryMarshaler to make custom layout
 // WriteHeader implements Manager.WriteHeader
 func (z *ZarManager) WriteHeader() error {
-        headerLoc := z.Writer.Count     // Offset for Metadata in image file
-        fmt.Printf("header location: %v bytes\n", headerLoc)
+	z.WriteFileMetadata()
 
-        mEnc := gob.NewEncoder(z.Writer.W)
-
-        fmt.Println("current Metadata:", z.Metadata)
-        mEnc.Encode(z.Metadata)
-
-        // Write location of Metadata to end of file
-        z.Writer.WriteInt64(int64(headerLoc))
-
-	// Write filter metadata to file
-        filterLoc := z.Writer.Count     // Offset for Metadata in image file
-        fmt.Printf("filter location: %v bytes\n", filterLoc)
-
-        fmt.Println("current FilterMetadata:", z.FilterMetadata)
-        mEnc.Encode(z.FilterMetadata)
-
-	// Write location of Metadata to end of file
-        z.Writer.WriteInt64(int64(filterLoc))
+	z.WriteFilterMetadata()
 
 	if err := z.Writer.Close(); err != nil {
                 log.Fatalf("can't close zar file: %v", err)
         }
         return nil
+}
+
+func (z *ZarManager) WriteFileMetadata() {
+        headerLoc := z.Writer.Count     // Offset for Metadata in image file
+        fmt.Printf("header location: %v bytes\n", headerLoc)
+
+	// Marshal metadata
+	gob.Register(FileMetadata{})
+
+	b := bytes.Buffer{}
+	e := gob.NewEncoder(&b)
+	err := e.Encode(z.Metadata)
+	if err != nil { fmt.Println(`failed gob Encode`, err) }
+
+        fmt.Println("current Metadata:", z.Metadata)
+	z.Writer.Write([]byte(base64.StdEncoding.EncodeToString(b.Bytes())), false) // Not pageAligned
+
+        // Write location of Metadata to end of file
+        z.Writer.WriteInt64(int64(headerLoc))
+
+	// Flush the writer
+	z.Writer.W.Flush()
+}
+
+func (z *ZarManager) WriteFilterMetadata() {
+	// Write filter metadata to file
+        filterLoc := z.Writer.Count     // Offset for Metadata in image file
+        fmt.Printf("filter location: %v bytes\n", filterLoc)
+
+	// Marshal Metadata
+	gob.Register(filter.FilterMetadata{})
+
+	b := bytes.Buffer{}
+	e := gob.NewEncoder(&b)
+	err := e.Encode(z.FilterMetadata)
+	if err != nil { fmt.Println(`failed gob Encode`, err) }
+
+        fmt.Println("current FilterMetadata:", z.FilterMetadata)
+	z.Writer.Write([]byte(base64.StdEncoding.EncodeToString(b.Bytes())), false) // Not pageAligned
+
+	// Write location of Metadata to end of file
+        z.Writer.WriteInt64(int64(filterLoc))
+
+	// Flush the writer
+	z.Writer.W.Flush()
 }

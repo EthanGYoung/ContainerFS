@@ -56,6 +56,7 @@ func (w *FileWriter) Init(fn string) error {
 // parameter (data)     : the data to be written
 // parameter (pageAlign): whether to page align the data
 func (w *FileWriter) Write(data []byte, pageAlign bool) (int64, error) {
+	fmt.Println("Writing to file")
         // Writes to FileWriter
         n, err := w.W.Write(data)
         if err != nil {
