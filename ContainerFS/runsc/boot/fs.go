@@ -253,6 +253,7 @@ func getMountNameAndOptions(conf *Config, m specs.Mount, fds *fdDispenser) (stri
 		useOverlay = conf.Overlay && !mountFlags(m.Options).ReadOnly
 
 	case imgfs:
+		log.Infof("Getting mount info on imgfs")
 		fsName = m.Type
 		opts = []string{"packageFD=" + strconv.Itoa(conf.PackageFD)}
 		useOverlay = true
@@ -725,11 +726,13 @@ func mountExpFS(ctx context.Context, layerFDs []int, submounts []string) (*fs.In
 	imgFS := mustFindFilesystem("imgfs")
 
 	for index, lfd := range layerFDs {
+		log.Infof("About to mount an imgfs layer: " + strconv.Itoa(index))
 		imgfsNode, err := imgFS.Mount(ctx, "imgfs-layer-" + strconv.Itoa(index), flags, "packageFD=" + strconv.Itoa(lfd), nil)
 		if err != nil {
 			return nil, fmt.Errorf("mounting imgfs layer %v, layerFD %v, err: %v", index, lfd, err)
 		}
     if currentNode != nil {
+		log.Infof("Creating imgfs overlay")
 	    if currentNode, err = fs.NewOverlayRoot(ctx, imgfsNode, currentNode, flags); err != nil {
 		    return nil, fmt.Errorf("creating imgfs overlay: %v", err)
       }

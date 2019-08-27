@@ -18,6 +18,7 @@ go_library(
         "//pkg/abi/linux",
         "//pkg/fd",
         "//pkg/fdnotifier",
+        "//pkg/filter",
         "//pkg/log",
         "//pkg/metric",
         "//pkg/refs",

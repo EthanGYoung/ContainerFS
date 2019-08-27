@@ -223,7 +223,7 @@ func (b *Boot) Execute(_ context.Context, f *flag.FlagSet, args ...interface{}) 
 		DeviceFD:     b.deviceFD,
 		GoferFDs:     b.ioFDs.GetArray(),
 		PackageFD:    conf.PackageFD,
-        LayerFDs:     b.layerFDs.GetArray(),
+		LayerFDs:     b.layerFDs.GetArray(),
 		StdioFDs:     b.stdioFDs.GetArray(),
 		Console:      b.console,
 		NumCPU:       b.cpuNum,

@@ -18,17 +18,18 @@ package imgfs
 
 import (
 	"bytes"
+	"encoding/base64"
 	"encoding/binary"
 	"encoding/gob"
 	"fmt"
 	"strconv"
 	"syscall"
 
-	// "gvisor.googlesource.com/gvisor/pkg/log"
+	"gvisor.googlesource.com/gvisor/pkg/filter"
+	"gvisor.googlesource.com/gvisor/pkg/log"
 	"gvisor.googlesource.com/gvisor/pkg/sentry/context"
 	"gvisor.googlesource.com/gvisor/pkg/sentry/fs"
 	"gvisor.googlesource.com/gvisor/pkg/sentry/fs/ramfs"
-	"gvisor.googlesource.com/gvisor/pkg/log"
 	"gvisor.googlesource.com/gvisor/pkg/sentry/usermem"
 )
 
@@ -94,6 +95,8 @@ func (*Filesystem) Flags() fs.FilesystemFlags {
 // Mount returns an fs.Inode exposing the host file system.  It is intended to be locked
 // down in PreExec below.
 func (f *Filesystem) Mount(ctx context.Context, _ string, flags fs.MountSourceFlags, data string, _ interface{}) (*fs.Inode, error) {
+	log.Infof("Mounting imgfs root")
+
 	// Parse generic comma-separated key=value options.
 	options := fs.GenericMountSourceOptions(data)
 
@@ -126,35 +129,35 @@ func (f *Filesystem) Mount(ctx context.Context, _ string, flags fs.MountSourceFl
 	if err != nil {
 		return nil, fmt.Errorf("unable to stat package file: %v", err)
 	}
+
 	log.Infof("stat package file size: %v", s.Size)
+
 	length := int(s.Size)
-    if length == 0 {
-        return nil, fmt.Errorf("the image file size shouldn't be zero")
-    }
-	// mmap, err := syscall.Mmap(int(f.packageFD), 0, length, syscall.PROT_READ|syscall.PROT_EXEC, syscall.MAP_SHARED)
-	mmap, err := syscall.Mmap(int(f.packageFD), 0, length, syscall.PROT_READ, syscall.MAP_SHARED)
+	if length == 0 {
+		return nil, fmt.Errorf("the image file size shouldn't be zero")
+	}
+
+	mmap, err := syscall.Mmap(int(f.packageFD), 0, length, syscall.PROT_READ|syscall.PROT_EXEC, syscall.MAP_SHARED)
+	//mmap, err := syscall.Mmap(int(f.packageFD), 0, length, syscall.PROT_READ, syscall.MAP_SHARED)
 	if err != nil {
         return nil, fmt.Errorf("can't mmap the package image file, packageFD: %v, length: %v, err: %v", int(f.packageFD), length, err)
 	}
-	headerLoc := mmap[length - 10 : length]
-	headerReader := bytes.NewReader(headerLoc)
-	n, err := binary.ReadVarint(headerReader)
-	if err != nil {
-		return nil, fmt.Errorf("can't read header location, err: %v", err)
-	}
-	header := mmap[int(n) : length - 10]
-	metadataReader := bytes.NewReader(header)
-	var metadata []fileMetadata
-	dec := gob.NewDecoder(metadataReader)
-	errDec := dec.Decode(&metadata)
-	if errDec != nil {
-		  return nil, fmt.Errorf("can't decode metadata data, err: %v", errDec)
-	}
 
-	i := 0
-	return MountImgRecursive(ctx, msrc, metadata, mmap, f.packageFD, &i, len(metadata))
+	// Decode Filter Metadata and read in filter
+	filtMetadata := processFilterHeader(mmap, length)
+	length = readFilter(mmap, filtMetadata)
+
+	// TODO: Update fs struct with filter
+
+	// Decode file metadata and read in files
+	filMetadata := processFileHeader(mmap, length)
+	//readFiles(mmap, fileMetadata, detail)
+
+	i := 0 // What is this for?
+	return MountImgRecursive(ctx, msrc, filMetadata, mmap, f.packageFD, &i, len(filMetadata))
 }
 
+// MountImgRecursive generates inodes for files in the image file
 func MountImgRecursive(ctx context.Context, msrc *fs.MountSource, metadata []fileMetadata, mmap []byte, packageFD int, i *int, length int) (*fs.Inode, error) {
 	contents := map[string]*fs.Inode{}
 	var whitoutFiles []string
@@ -165,7 +168,10 @@ func MountImgRecursive(ctx context.Context, msrc *fs.MountSource, metadata []fil
 		fileType := metadata[*i].Type
 		fileModTime := metadata[*i].ModTime
 
+		log.Infof("Processing file: " + fileName)
+
 		if fileType == ImgFSRegularFile {
+			log.Infof("Regular file")
 			inode, err := newInode(ctx, msrc, offsetBegin, offsetEnd, fileModTime, packageFD, mmap)
 			if err != nil {
 				return nil, fmt.Errorf("can't create inode file %v, err: %v", fileName, err)
@@ -173,6 +179,7 @@ func MountImgRecursive(ctx context.Context, msrc *fs.MountSource, metadata []fil
 			contents[fileName] = inode
 			*i = *i + 1
 		} else if fileType == ImgFSDirectory {
+			log.Infof("Directory")
 			*i = *i + 1
 			if fileName != ".." {
 				var err error
@@ -184,6 +191,7 @@ func MountImgRecursive(ctx context.Context, msrc *fs.MountSource, metadata []fil
 				break
 			}
 		} else if fileType == ImgFSSymlink {
+			log.Infof("Symlink")
 			link := metadata[*i].Link
 			inode := newSymlink(ctx, msrc, link)
 			contents[fileName] = inode
@@ -211,4 +219,103 @@ func MountImgRecursive(ctx context.Context, msrc *fs.MountSource, metadata []fil
 
 func init() {
 	fs.RegisterFilesystem(&Filesystem{})
+}
+
+// processFilterHeader finds the filter metadata, decodes it, and initializes metadata for the filter
+func processFilterHeader(mmap []byte, length int) (filter.FilterMetadata) {
+	fmt.Println("Processing Filter Header")
+
+	n := getHeaderLocation(mmap, length)
+
+	// Decode the metadata in the header
+	header := mmap[int(n) : length - 10]
+	log.Infof("metadata data:", header)
+
+	gob.Register(filter.FilterMetadata{})
+
+	var metadata filter.FilterMetadata
+
+	by, err := base64.StdEncoding.DecodeString(string(header))
+	if err != nil { fmt.Errorf(`failed base64 Decode %v`, err); }
+	b := bytes.Buffer{}
+	b.Write(by)
+	d := gob.NewDecoder(&b)
+	err = d.Decode(&metadata)
+	if err != nil { fmt.Errorf(`failed gob Decode`, err); }
+
+	log.Infof("metadata data decoded:", metadata)
+	return metadata
+}
+
+// getHeaderLocation decodes the location of the header given the offset into the file
+func getHeaderLocation(mmap []byte, length int) (int64) {
+	// Filter header location is specifed by int64 at last 10 bits (bytes?)
+	headerLoc := mmap[length - 10 : length]
+	fmt.Println("header data:", headerLoc)
+
+	// Setup reader for header data
+	headerReader := bytes.NewReader(headerLoc)
+	n, err := binary.ReadVarint(headerReader)
+	if err != nil {
+		fmt.Errorf("can't read header location, err: %v", err)
+	}
+	fmt.Printf("headerLoc: %v bytes\n", n)
+
+	return n
+}
+
+// readFilter decodes the filter (bloom filter default) from the image file and intializes the filter
+func readFilter(mmap []byte, filtMetadata filter.FilterMetadata) (int) {
+	// Find location of filter struct
+	filtLoc := filtMetadata.FilterLoc
+	filtSize := filtMetadata.FilterStructSize
+
+	start := uint64(filtLoc)
+	end := start + uint64(filtSize)
+
+	// Decode filter
+	gob.Register(filter.BloomFilter{})
+
+	var bf filter.BloomFilter
+
+	data := mmap[start:end]
+
+	by, err := base64.StdEncoding.DecodeString(string(data))
+	if err != nil { fmt.Errorf(`failed base64 Decode`, err); }
+	b := bytes.Buffer{}
+	b.Write(by)
+	d := gob.NewDecoder(&b)
+	err = d.Decode(&bf)
+	if err != nil { fmt.Errorf(`failed gob Decode`, err); }
+
+	// Print
+	log.Infof("filter data decoded:", bf)
+
+	return int(start) // Where next offset is
+}
+
+func processFileHeader(mmap []byte, length int) ([]fileMetadata) {
+	log.Infof("Processing file header. Length=" + strconv.Itoa(length))
+
+	n := getHeaderLocation(mmap, length)
+
+	// Decode the metadata in the header
+	var metadata []fileMetadata
+	header := mmap[int(n) : length - 10]
+	log.Infof("metadata data:", header)
+
+	gob.Register(fileMetadata{})
+	gob.Register([]fileMetadata{})
+
+	by, err := base64.StdEncoding.DecodeString(string(header))
+	if err != nil { fmt.Errorf(`failed base64 Decode`, err); }
+	b := bytes.Buffer{}
+	b.Write(by)
+	d := gob.NewDecoder(&b)
+	err = d.Decode(&metadata)
+	if err != nil { fmt.Errorf(`failed gob Decode`, err); }
+
+	log.Infof("metadata data decoded:", metadata)
+	return metadata
+
 }

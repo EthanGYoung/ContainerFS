@@ -67,6 +67,13 @@ go_repository(
 )
 
 go_repository(
+    name = "com_github_spaolacci_murmur3",
+    importpath = "github.com/spaolacci/murmur3",
+    commit = "539464a789e9b9f01bc857458ffe2c5c1a2ed382",
+)
+
+
+go_repository(
     name = "com_github_kr_pty",
     importpath = "github.com/kr/pty",
     commit = "282ce0e5322c82529687d609ee670fac7c7d917c",

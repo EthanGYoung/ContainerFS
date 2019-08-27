@@ -5,7 +5,7 @@ all:
 
 run:
 	sudo rm -rf /tmp/runsc
-	sudo docker run --runtime=runsc hello-world
+	sudo docker run --runtime=runsc boot
 
 build:
 	sudo rm -rf /tmp/runsc

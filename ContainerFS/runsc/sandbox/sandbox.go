@@ -393,12 +393,14 @@ func (s *Sandbox) createSandboxProcess(spec *specs.Spec, conf *boot.Config, bund
 		nextFD++
 	}
 
-    //Experiemntal Feature: use multiple layers of imgfs to replace gofer.
+	log.Infof("Rootpath: " + spec.Root.Path)
+    //Experimental Feature: use multiple layers of imgfs to replace gofer.
     files, err := ioutil.ReadDir(spec.Root.Path)
     var layers []string
     for _, file := range files {
         if strings.HasSuffix(file.Name(), ".img") {
-            layers = append(layers, file.Name())
+		log.Infof("Found img")
+		layers = append(layers, file.Name())
         }
     }
     // Layers have their order. We assume the layer with lower ascii order is the lower layer. e.g. layer1.img > layer2.img > layer3.img

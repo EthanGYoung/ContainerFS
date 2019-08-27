@@ -11,6 +11,6 @@ go_library(
     importpath = "gvisor.googlesource.com/gvisor/pkg/filter",
     visibility = ["//pkg/sentry:internal"],
     deps = [
-        "github.com/spaolacci/murmur3",
+        "@com_github_spaolacci_murmur3//:go_default_library",
     ],
 )
