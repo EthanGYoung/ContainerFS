@@ -47,4 +47,11 @@ Bloom Filter Driver
 		- Create statistics struct that holds this information
 	x 2) Initialize a Bloom Filter given specific probability and num elements
 	x 3) Recursively traverse image metadata to create hashed paths for filter
-	4) Append bloom filter to metadata
+	x 4) Append bloom filter to metadata
+
+Future Modifications
+- Generalize to work with arbitrary type of filter. Currently, it only works for BloomFilters.
+- Move ZarManager to its own file from Manager interface file
+- Move some of the file write and read in main to seperate file
+- Create generalized metadata writing and reading methods to support new types of metadata to be written
+- Change from Gob to a binary marshalling that could support faster imports on ContainerFS side
