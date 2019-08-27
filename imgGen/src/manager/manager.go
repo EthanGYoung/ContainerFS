@@ -263,8 +263,9 @@ func (z *ZarManager) GenerateFilter() {
 	z.FilterMetadata = filter.FilterMetadata{
 		Active:true,
 		Name:"BloomFilter", // Default to BloomFilter
-		Filter:z.Filter,
 	}
+
+	// TODO: Write filter to file here instead of in Header Method
 }
 
 // ConstructFilter initializes a filter by looping over FileMetadata
@@ -340,18 +341,34 @@ func (z *ZarManager) WriteFileMetadata() {
 }
 
 func (z *ZarManager) WriteFilterMetadata() {
-	// Write filter metadata to file
+	initLoc := z.Writer.Count
+
+	// Write filter data to file (Need to marshal Bloom Filter struct)
+	gob.Register(filter.BloomFilter{})
+
+	buf := bytes.Buffer{}
+	e := gob.NewEncoder(&buf)
+	err := e.Encode(z.Filter)
+	if err != nil { fmt.Println(`failed gob Encode`, err) }
+
+	fmt.Println("Writing BloomFilter:", z.Filter)
+	z.Writer.Write([]byte(base64.StdEncoding.EncodeToString(buf.Bytes())), false) // Not pageAligned
+
+	// Set size of BloomFilter
         filterLoc := z.Writer.Count     // Offset for Metadata in image file
+
+	z.FilterMetadata.FilterLoc = initLoc
+	z.FilterMetadata.FilterStructSize = filterLoc - initLoc
+
+	// Write filter metadata to file
         fmt.Printf("filter location: %v bytes\n", filterLoc)
 
 	// Marshal Metadata
 	gob.Register(filter.FilterMetadata{})
-	gob.Register(&filter.BloomFilter{})
-	//gob.Register(filter.BloomFilter{})
 
 	b := bytes.Buffer{}
-	e := gob.NewEncoder(&b)
-	err := e.Encode(z.FilterMetadata)
+	e = gob.NewEncoder(&b)
+	err = e.Encode(z.FilterMetadata)
 	if err != nil { fmt.Println(`failed gob Encode`, err) }
 
         fmt.Println("current FilterMetadata:", z.FilterMetadata)

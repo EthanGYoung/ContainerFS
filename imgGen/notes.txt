@@ -33,6 +33,7 @@ File Organization
 	- Initialize filter 	-> Allows for parameters to be passed in specifying size and number hash functions
 	- Add element 		-> Add element to the filter
 	- Remove element	-> Remove an element from a filter (Not supported in Bloom, but in cuckoo it is)
+	- Test element		-> Test whether an element is in the filter
 	
 	// Make specific to each filter, future filters may not need this
 	- Optimize filter	-> Allows for computation of relevant parameters in "first pass" for generating filters

@@ -36,6 +36,9 @@ type FilterMetadata struct {
 	// Name represents the name of the filter used for this layer. Must be same as in ContainerFS
 	Name string
 
-	// Filter is the filter associated with this layer
-	Filter Filter
+	// FilterStructSize is the numbber of bytes (bits?) that the BloomFilter struct takes up
+	FilterLoc int64
+
+	// FilterStructSize is the size in bytes of the encoded structure
+	FilterStructSize int64
 }
