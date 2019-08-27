@@ -3,6 +3,10 @@ release = $(shell lsb_release -cs)
 all:
 	make docker custom_gvisor_deps
 
+run:
+	sudo rm -rf /tmp/runsc
+	sudo docker run --runtime=runsc hello-world
+
 build:
 	sudo rm -rf /tmp/runsc
 	bazel build runsc
