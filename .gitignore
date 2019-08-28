@@ -13,3 +13,15 @@
 
 # Generated bazel symlinks.
 /bazel-*
+
+# Bazel git
+*~
+.*.swp
+ContainerFS/.classpath
+ContainerFS/.factorypath
+ContainerFS/.idea/
+ContainerFS/.project
+ContainerFS/.settings
+ContainerFS/WORKSPACE.user.bzl
+ContainerFS/bazel-*
+ContainerFS/output/

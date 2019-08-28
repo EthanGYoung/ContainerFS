@@ -1,0 +1,7 @@
+Goal: Implementing Bloom Filters for different imgFS and overlayFS layers
+
+Path
+	1) Update metadata reader to read in the new image file metadata format
+	2) Update FS structure to allow for a Bloom Filter
+	3) Update logic on reads and opens to check filter before executing the open/read/write
+		- If not path not in filter, can return immediately instead of executing lookup
