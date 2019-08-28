@@ -207,6 +207,9 @@ func MountImgRecursive(ctx context.Context, msrc *fs.MountSource, metadata []fil
 			return nil, fmt.Errorf("unknown file type %v (type: %v)", fileName, fileType)
 		}
 	}
+
+	log.Infof("About to create new dir to hold imgfs mount")
+
 	d := ramfs.NewDir(ctx, contents, fs.RootOwner, fs.FilePermsFromMode(linux.FileMode(dirMode)))
 	newinode := fs.NewInode(d, msrc, fs.StableAttr{
 		DeviceID:  imgfsFileDevice.DeviceID(),

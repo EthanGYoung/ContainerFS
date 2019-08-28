@@ -29,7 +29,7 @@ if __name__ == "__main__":
 	layer_count = 0
 	
 	for layer_dir in dirs:
-		print("Looping through dirs")
+		print("Looping through layers")
 
 		tokens = layer_dir.split("/")
 		id = tokens[-2]

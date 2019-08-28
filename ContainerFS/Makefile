@@ -5,7 +5,7 @@ all:
 
 run:
 	sudo rm -rf /tmp/runsc
-	sudo docker run --runtime=runsc boot
+	sudo docker run --runtime=runsc cfs-boot
 
 build:
 	sudo rm -rf /tmp/runsc
