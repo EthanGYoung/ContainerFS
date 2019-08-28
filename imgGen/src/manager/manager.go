@@ -23,9 +23,10 @@ type fileType int
 
 const (
 	// Represent the possible file types for files
-    RegularFile fileType = iota
-    Directory
-    Symlink
+	RegularFile fileType = iota
+	Directory
+	Symlink
+	WhiteoutFile
 )
 
 // Manager is an interface for creating the image file.
@@ -37,12 +38,12 @@ type Manager interface {
         // Parameter (dir)              : name of path relative to root dir
         // parameter (foldername)       : name of current folder
         // parameter (root)             : whether or not dir is the root dir
-        WalkDir(dir string, foldername string, mod_time int64, root bool)
+        WalkDir(dir string, foldername string, mod_time int64, mode os.FileMode, root bool)
 
         // IncludeFolderBegin initializes Metadata for the beginning of a file
         //
         // parameter (name)     : name of the file beginning
-        IncludeFolderBegin(name string, mod_time int64)
+        IncludeFolderBegin(name string, mod_time int64, mode os.FileMode)
 
         // IncludeFolderEnd initializes Metadata for the end of a file
         IncludeFolderEnd()
@@ -53,6 +54,8 @@ type Manager interface {
         // paramter (basedir)   : name of the current directory relative to root
         // return               : new offset into the image file
         IncludeFile(fn string, basedir string, mod_time int64) (int64, error)
+
+	// TODO: Add IncludeWhiteoutFile and IncludeSymlink to interface
 
 	// GenerateFilter creates a filter based on the files in the img file
 	GenerateFilter()
@@ -81,6 +84,9 @@ type FileMetadata struct {
 
         // Type indicated the type of a specific file (dir, symlink or regular file)
         Type fileType
+
+	// TODO: What does this do
+	Mode os.FileMode
 }
 
 // Manager is the main driver of creating the image file. It writes the data and stores Metadata.
@@ -107,14 +113,15 @@ type ZarManager struct {
 type DirInfo struct {
         Name string
         ModTime int64
+	Mode os.FileMode
 }
 
 // WalkDir implemented Manager.WalkDir
-func (z *ZarManager) WalkDir(dir string, foldername string, mod_time int64, root bool) {
+func (z *ZarManager) WalkDir(dir string, foldername string, mod_time int64, mode os.FileMode, root bool) {
         // root dir not marked as directory
         if !root {
                 fmt.Printf("including folder: %v, name: %v\n", dir, foldername)
-                z.IncludeFolderBegin(foldername, mod_time)
+                z.IncludeFolderBegin(foldername, mod_time, mode)
         }
 
         // Retrieve all files in current directory
@@ -128,11 +135,19 @@ func (z *ZarManager) WalkDir(dir string, foldername string, mod_time int64, root
         // Process each file in the directory
         for _, file := range files {
                 name := file.Name()
+		mode := file.Mode()
                 symlink := file.Mode() & os.ModeSymlink != 0
-                file_path := path.Join(dir, name)
+                device := file.Mode() & os.ModeDevice != 0
+		size := file.Size()
+		file_path := path.Join(dir, name)
                 mod_time := file.ModTime().UnixNano()
 
-                if symlink {
+		if device {
+	                  if size != 0 {
+	                    log.Fatalf("character device with non-zero size is not a whiteout file.")
+	                  }
+	                  z.IncludeWhiteoutFile(name, mod_time)
+                } else if symlink {
                         // Symbolic link is an indirection, thus read and include
                         fmt.Printf("%v is symlink.", file_path)
                         real_dest, err := os.Readlink(file_path)
@@ -140,13 +155,13 @@ func (z *ZarManager) WalkDir(dir string, foldername string, mod_time int64, root
                                 log.Fatalf("error. Can't read symlink file. %v", real_dest)
                         }
                         // TODO: Can we replace with file redirecting to here? Could eliminate symbolic links
-                        z.IncludeSymlink(name, real_dest, mod_time)
+                        z.IncludeSymlink(name, real_dest, mod_time, mode)
                 } else {
                         if !file.IsDir() {
                                 fmt.Printf("including file: %v\n", name)
-                                z.IncludeFile(name, dir, mod_time)
+                                z.IncludeFile(name, dir, mod_time, mode)
                         } else {
-                                dirs = append(dirs, &DirInfo{name, mod_time})
+                                dirs = append(dirs, &DirInfo{name, mod_time, mode})
                         }
                 }
         }
@@ -154,7 +169,7 @@ func (z *ZarManager) WalkDir(dir string, foldername string, mod_time int64, root
         // Recursively search each directory (DFS)
         // After file processing to improve spatial locatlity for files
         for _, subDir := range dirs {
-                z.WalkDir(path.Join(dir, subDir.Name), subDir.Name, subDir.ModTime, false)
+                z.WalkDir(path.Join(dir, subDir.Name), subDir.Name, subDir.ModTime, subDir.Mode, false)
         }
 
         // root dir not marked as directory
@@ -165,13 +180,14 @@ func (z *ZarManager) WalkDir(dir string, foldername string, mod_time int64, root
 
 // TODO: Change to interface for Metadata to have diff types of Metadata
 // IncludeFolderBegin implements Manager.IncludeFolderBegin
-func (z *ZarManager) IncludeFolderBegin(name string, mod_time int64) {
+func (z *ZarManager) IncludeFolderBegin(name string, mod_time int64, mode os.FileMode) {
         h := &FileMetadata{
-                    Begin   : -1,
-                    End     : -1,
-                    Name    : name,
-                    Type    : Directory,
-                    ModTime : mod_time,
+		Begin   : -1,
+		End     : -1,
+		Name    : name,
+		Type    : Directory,
+		ModTime : mod_time,
+		Mode	: mode,
         }
 
         // Add to the image's Metadata at end
@@ -193,6 +209,18 @@ func (z *ZarManager) IncludeFolderEnd() {
         z.Metadata = append(z.Metadata, *h)
 }
 
+func (z *ZarManager) IncludeWhiteoutFile(name string, mod_time int64) {
+	// Create the file Metadata
+	h := &FileMetadata{
+		  Begin   : -1,
+		  End     : -1,
+		  Name    : name,
+		  Type    : WhiteoutFile,
+		  ModTime : mod_time,
+	}
+	z.Metadata = append(z.Metadata, *h)
+}
+
 // IncludeSymlink adds Metadata to the image file for a symbolic link. This
 // allows for paths to be indirections. Not included in interface because
 // not necessarily fundamental for correctness.
@@ -201,14 +229,15 @@ func (z *ZarManager) IncludeFolderEnd() {
 // parameter (link)     : the actual path to the desired file
 // parameter (mod_time) : the modification time fo the file
 
-func (z *ZarManager) IncludeSymlink(name string, link string, mod_time int64) {
+func (z *ZarManager) IncludeSymlink(name string, link string, modTime int64, mode os.FileMode) {
         h := &FileMetadata{
-                        Begin   : -1,
-                        End     : -1,
-                        Name    : name,
-                        Link    : link,
-                        Type    : Symlink,
-                        ModTime : mod_time,
+		Begin   : -1,
+		End     : -1,
+		Name    : name,
+		Link    : link,
+		Type    : Symlink,
+		ModTime : modTime,
+		Mode	: mode,
         }
         z.Metadata = append(z.Metadata, *h)
 
@@ -216,7 +245,7 @@ func (z *ZarManager) IncludeSymlink(name string, link string, mod_time int64) {
 }
 
 // IncludeFile implements Manager.IncludeFile
-func (z *ZarManager) IncludeFile(fn string, basedir string, mod_time int64) (int64, error) {
+func (z *ZarManager) IncludeFile(fn string, basedir string, mod_time int64, mode os.FileMode) (int64, error) {
         content, err := ioutil.ReadFile(path.Join(basedir, fn))
         if err != nil {
                 log.Fatalf("can't include file %v, err: %v", fn, err)
@@ -233,11 +262,12 @@ func (z *ZarManager) IncludeFile(fn string, basedir string, mod_time int64) (int
 
         // Create the file Metadata
         h := &FileMetadata{
-                        Begin   : oldCounter,
-                        End     : real_end,
-                        Name    : fn,
-                        Type    : RegularFile,
-                        ModTime : mod_time,
+		Begin   : oldCounter,
+		End     : real_end,
+		Name    : fn,
+		Type    : RegularFile,
+		ModTime : mod_time,
+		Mode	: mode,
         }
         z.Metadata = append(z.Metadata, *h)
 

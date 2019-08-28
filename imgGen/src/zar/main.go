@@ -69,7 +69,7 @@ func writeImage(dir string, output string, pageAlign bool, config bool, configPa
 		z.Writer.Init(output)
 
 		// Begin recursive walking of directories
-		z.WalkDir(dir, dir, 0, true)
+		z.WalkDir(dir, dir,0, 0, true)
 
 		// Recursively construct a filter for img
 		z.GenerateFilter()
@@ -180,7 +180,7 @@ func readFiles(mmap []byte, metadata []manager.FileMetadata, detail bool) {
 			} else {
 				fileString = "ignored"
 			}
-			fmt.Printf("[regular file] %v (data: %v)\n", v.Name, fileString)
+			fmt.Printf("[regular file] %v mode:%o (data: %v)\n", v.Name, v.Mode, fileString)
 		}
 	}
 
