@@ -328,18 +328,21 @@ func (s *Sandbox) createSandboxProcess(spec *specs.Spec, conf *boot.Config, bund
 		nextFD++
 	}
 
-    packageFile, err := os.OpenFile(conf.ImgPath, os.O_RDONLY, 0644)
-    if err != nil {
-		return fmt.Errorf("opening package file: %v", err)
+	// Legacy code from first gen imgFS
+	if conf.ImgPath != "" {
+		packageFile, err := os.OpenFile(conf.ImgPath, os.O_RDONLY, 0644)
+		if err != nil {
+			return fmt.Errorf("opening package file: %v", err)
+		}
+		defer packageFile.Close()
+		cmd.ExtraFiles = append(cmd.ExtraFiles, packageFile)
+		cmd.Args = append(cmd.Args, "--package-fd="+strconv.Itoa(nextFD))
+		nextFD++
 	}
-	defer packageFile.Close()
-	cmd.ExtraFiles = append(cmd.ExtraFiles, packageFile)
-    cmd.Args = append(cmd.Args, "--package-fd="+strconv.Itoa(nextFD))
-	nextFD++
 
 
 
-    // Add the "boot" command to the args.
+	// Add the "boot" command to the args.
 	//
 	// All flags after this must be for the boot command
 	cmd.Args = append(cmd.Args, "boot", "--bundle="+bundleDir)

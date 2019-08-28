@@ -132,9 +132,9 @@ func main() {
 		cmd.Fatalf("%v", err)
 	}
 
-	if *imgPath == "" {
-		cmd.Fatalf("imgPath %v is invalid", *imgPath)
-	}
+	//if *imgPath == "" {
+	//	cmd.Fatalf("imgPath %v is invalid", *imgPath)
+	//}
 	// Create a new Config from the flags.
 	conf := &boot.Config{
 		RootDir:        *rootDir,
@@ -144,11 +144,11 @@ func main() {
 		DebugLog:       *debugLog,
 		DebugLogFormat: *debugLogFormat,
 		FileAccess:     fsAccess,
-		ImgPath:				*imgPath,
+		ImgPath:	*imgPath, // Note: Image path can now be nothing, legacy
 		Overlay:        *overlay,
 		Network:        netType,
 		LogPackets:     *logPackets,
-		PackageFD:			*packageFD,
+		PackageFD:	*packageFD,
 		Platform:       platformType,
 		Strace:         *strace,
 		StraceLogSize:  *straceLogSize,

@@ -238,6 +238,9 @@ func (c *Config) ToFlags() []string {
 		"--panic-signal=" + strconv.Itoa(c.PanicSignal),
 		"--profile=" + strconv.FormatBool(c.ProfileEnable),
 	}
+	if c.ImgPath != "" {
+		f = append(f, "--img-path=" + c.ImgPath)
+	}
 	if c.TestOnlyAllowRunAsCurrentUserWithoutChroot {
 		// Only include if set since it is never to be used by users.
 		f = append(f, "-TESTONLY-unsafe-nonroot=true")

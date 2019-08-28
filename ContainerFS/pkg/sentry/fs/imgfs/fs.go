@@ -22,9 +22,11 @@ import (
 	"encoding/binary"
 	"encoding/gob"
 	"fmt"
+	"os"
 	"strconv"
 	"syscall"
 
+	"gvisor.googlesource.com/gvisor/pkg/abi/linux"
 	"gvisor.googlesource.com/gvisor/pkg/filter"
 	"gvisor.googlesource.com/gvisor/pkg/log"
 	"gvisor.googlesource.com/gvisor/pkg/sentry/context"
@@ -68,6 +70,7 @@ type fileMetadata struct {
 	Link string
 	ModTime int64
 	Type fileType
+	Mode os.FileMode
 }
 
 var _ fs.Filesystem = (*Filesystem)(nil)
@@ -154,11 +157,11 @@ func (f *Filesystem) Mount(ctx context.Context, _ string, flags fs.MountSourceFl
 	//readFiles(mmap, fileMetadata, detail)
 
 	i := 0 // What is this for?
-	return MountImgRecursive(ctx, msrc, filMetadata, mmap, f.packageFD, &i, len(filMetadata))
+	return MountImgRecursive(ctx, msrc, filMetadata, os.ModeDir | 0555, mmap, f.packageFD, &i, len(filMetadata))
 }
 
 // MountImgRecursive generates inodes for files in the image file
-func MountImgRecursive(ctx context.Context, msrc *fs.MountSource, metadata []fileMetadata, mmap []byte, packageFD int, i *int, length int) (*fs.Inode, error) {
+func MountImgRecursive(ctx context.Context, msrc *fs.MountSource, metadata []fileMetadata,dirMode os.FileMode, mmap []byte, packageFD int, i *int, length int) (*fs.Inode, error) {
 	contents := map[string]*fs.Inode{}
 	var whitoutFiles []string
 	for *i < length {
@@ -167,12 +170,13 @@ func MountImgRecursive(ctx context.Context, msrc *fs.MountSource, metadata []fil
 		fileName := metadata[*i].Name
 		fileType := metadata[*i].Type
 		fileModTime := metadata[*i].ModTime
+		fileMode := metadata[*i].Mode
 
 		log.Infof("Processing file: " + fileName)
 
 		if fileType == ImgFSRegularFile {
 			log.Infof("Regular file")
-			inode, err := newInode(ctx, msrc, offsetBegin, offsetEnd, fileModTime, packageFD, mmap)
+			inode, err := newInode(ctx, msrc, offsetBegin, offsetEnd, fileModTime, fileMode, packageFD, mmap)
 			if err != nil {
 				return nil, fmt.Errorf("can't create inode file %v, err: %v", fileName, err)
 			}
@@ -183,7 +187,7 @@ func MountImgRecursive(ctx context.Context, msrc *fs.MountSource, metadata []fil
 			*i = *i + 1
 			if fileName != ".." {
 				var err error
-				contents[fileName], err = MountImgRecursive(ctx, msrc, metadata, mmap, packageFD, i, length)
+				contents[fileName], err = MountImgRecursive(ctx, msrc, metadata, fileMode, mmap, packageFD, i, length)
 				if err != nil {
 					return nil, fmt.Errorf("can't create recursive folder %v, err: %v", fileName, err)
 				}
@@ -203,7 +207,7 @@ func MountImgRecursive(ctx context.Context, msrc *fs.MountSource, metadata []fil
 			return nil, fmt.Errorf("unknown file type %v (type: %v)", fileName, fileType)
 		}
 	}
-	d := ramfs.NewDir(ctx, contents, fs.RootOwner, fs.FilePermsFromMode(0555))
+	d := ramfs.NewDir(ctx, contents, fs.RootOwner, fs.FilePermsFromMode(linux.FileMode(dirMode)))
 	newinode := fs.NewInode(d, msrc, fs.StableAttr{
 		DeviceID:  imgfsFileDevice.DeviceID(),
 		InodeID:   imgfsFileDevice.NextIno(),
