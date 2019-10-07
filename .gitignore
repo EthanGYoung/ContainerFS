@@ -27,3 +27,7 @@ ContainerFS/bazel-*
 ContainerFS/output/
 
 *.img
+imgGen/go
+imgGen/go1.12.9.linux-amd64.tar.gz
+imgGen/go1.12.9.linux-amd64.tar.gz.1
+imgGen/go1.12.9.linux-amd64.tar.gz.2

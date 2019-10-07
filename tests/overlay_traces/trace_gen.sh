@@ -14,11 +14,9 @@ do
 	for (( j=0; j<$num_files_per_img; j++ ))
 	do
 		# Generate random filename
-		# hash=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 32 | head -n 1)
 		hash="img$i-$j"
 	
 		# Generate random content
-		#txt=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 32 | head -n 1)
 		txt="Random txt"
 		dir="dir1"
 			
