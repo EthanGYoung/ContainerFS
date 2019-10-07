@@ -1,7 +1,7 @@
 release = $(shell lsb_release -cs)
 
 all:
-	make docker custom_gvisor_deps
+	make docker custom_gv_deps
 
 run:
 	sudo rm -rf /tmp/runsc
