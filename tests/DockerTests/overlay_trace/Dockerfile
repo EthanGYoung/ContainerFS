@@ -1,11 +1,4 @@
-FROM scratch
-ADD 53b02d8b475b8489734b408d026b6bb3ca2ade37c88226f577236c5d516ee220.img /0.img
-ADD cf12b89b80b517c8b250ffa3e42953045da0d3323baf26140288cc4e1e68097b.img /1.img
-ADD 2d5744c4026517a5631cb86544c775a826a19fc8d39051b2e7eebcd99648712b.img /2.img
-ADD d8eead4966504618dde3e26136ad28139df8a3b10f303d97b903253749ac0012.img /3.img
-ADD 4e300ba4701d0e40ae48ad1ea061fa16b30138896ee933845abbd643fa1de0ab.img /4.img
-ADD 0a09745c0149394816c1e41abc8931a5de4173e62c266f50be03af5c5c0c6d09.img /5.img
-ADD d58deb8680a81f7757a462b6c1c712d650cd7e0de0b5a3bb1ef92c8c44330176.img /6.img
-ADD d8b84182acd42d018760772aa11af106e7b36dab6086f84a4d9198b812afffac.img /7.img
-WORKDIR .
-CMD [ "python","/usr/src/python_spinup/python_hello_world.py" ]
+FROM python:3.5.2
+COPY . /usr/src/python_trace
+WORKDIR /usr/src/python_trace
+CMD [ "python","./trace_layer.py" ]
