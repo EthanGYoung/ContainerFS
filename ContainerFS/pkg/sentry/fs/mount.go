@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"sync"
 	"sync/atomic"
+	"gvisor.googlesource.com/gvisor/pkg/log"
 
 	"gvisor.googlesource.com/gvisor/pkg/refs"
 	"gvisor.googlesource.com/gvisor/pkg/sentry/context"
@@ -149,6 +150,9 @@ type MountSource struct {
 
 	// children are the child MountSources of this MountSource.
 	children map[*MountSource]struct{}
+
+	// Name of this mount -> Often the layer name for debugging
+	name string
 }
 
 // defaultDirentCacheSize is the number of Dirents that the VFS can hold an extra
@@ -157,13 +161,18 @@ const defaultDirentCacheSize uint64 = 1000
 
 // NewMountSource returns a new MountSource. Filesystem may be nil if there is no
 // filesystem backing the mount.
-func NewMountSource(mops MountSourceOperations, filesystem Filesystem, flags MountSourceFlags) *MountSource {
+func NewMountSource(mops MountSourceOperations, filesystem Filesystem, flags MountSourceFlags, name string) *MountSource {
+	mount_name := "No name"
+	log.Infof("Name in mount: %v", name)	
+	if (name != "") { mount_name = name }
+	log.Infof("Mount_name: %v", mount_name)
 	return &MountSource{
 		MountSourceOperations: mops,
 		Flags:                 flags,
 		Filesystem:            filesystem,
 		fscache:               NewDirentCache(defaultDirentCacheSize),
 		children:              make(map[*MountSource]struct{}),
+		name:				   mount_name,
 	}
 }
 
@@ -248,11 +257,11 @@ func (msrc *MountSource) FlushDirentRefs() {
 
 // NewCachingMountSource returns a generic mount that will cache dirents
 // aggressively.
-func NewCachingMountSource(filesystem Filesystem, flags MountSourceFlags) *MountSource {
+func NewCachingMountSource(filesystem Filesystem, flags MountSourceFlags, name string) *MountSource {
 	return NewMountSource(&SimpleMountSourceOperations{
 		keep:       true,
 		revalidate: false,
-	}, filesystem, flags)
+	}, filesystem, flags, name)
 }
 
 // NewNonCachingMountSource returns a generic mount that will never cache dirents.
@@ -260,7 +269,7 @@ func NewNonCachingMountSource(filesystem Filesystem, flags MountSourceFlags) *Mo
 	return NewMountSource(&SimpleMountSourceOperations{
 		keep:       false,
 		revalidate: false,
-	}, filesystem, flags)
+	}, filesystem, flags, "Noncache")
 }
 
 // NewRevalidatingMountSource returns a generic mount that will cache dirents,
@@ -269,7 +278,7 @@ func NewRevalidatingMountSource(filesystem Filesystem, flags MountSourceFlags) *
 	return NewMountSource(&SimpleMountSourceOperations{
 		keep:       true,
 		revalidate: true,
-	}, filesystem, flags)
+	}, filesystem, flags, "Reval")
 }
 
 // NewPseudoMountSource returns a "pseudo" mount source that is not backed by
@@ -278,7 +287,7 @@ func NewPseudoMountSource() *MountSource {
 	return NewMountSource(&SimpleMountSourceOperations{
 		keep:       false,
 		revalidate: false,
-	}, nil, MountSourceFlags{})
+	}, nil, MountSourceFlags{}, "Pseudo")
 }
 
 // SimpleMountSourceOperations implements MountSourceOperations.

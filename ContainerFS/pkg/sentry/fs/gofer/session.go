@@ -247,7 +247,7 @@ func Root(ctx context.Context, dev string, filesystem fs.Filesystem, superBlockF
 	}
 
 	// Construct the MountSource with the session and superBlockFlags.
-	m := fs.NewMountSource(s, filesystem, superBlockFlags)
+	m := fs.NewMountSource(s, filesystem, superBlockFlags, "root")
 
 	// Send the Tversion request.
 	s.client, err = p9.NewClient(conn, s.msize, s.version)

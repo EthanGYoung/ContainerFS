@@ -17,7 +17,7 @@ package imgfs
 import (
 	"syscall"
 	"unsafe"
-
+	"gvisor.googlesource.com/gvisor/pkg/log"
 	//"gvisor.googlesource.com/gvisor/pkg/abi/linux"
 	"gvisor.googlesource.com/gvisor/pkg/sentry/fs"
 	//ktime "gvisor.googlesource.com/gvisor/pkg/sentry/kernel/time"
@@ -32,6 +32,7 @@ func createLink(fd int, name string, linkName string) error {
 }
 
 func readLink(fd int) (string, error) {
+	log.Infof("readLink in imgfs")
 	// Buffer sizing copied from os.Readlink.
 	for l := 128; ; l *= 2 {
 		b := make([]byte, l)

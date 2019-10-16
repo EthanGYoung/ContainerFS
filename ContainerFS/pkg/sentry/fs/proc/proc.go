@@ -19,7 +19,7 @@ import (
 	"fmt"
 	"sort"
 	"strconv"
-
+	"gvisor.googlesource.com/gvisor/pkg/log"
 	"gvisor.googlesource.com/gvisor/pkg/sentry/context"
 	"gvisor.googlesource.com/gvisor/pkg/sentry/fs"
 	"gvisor.googlesource.com/gvisor/pkg/sentry/fs/fsutil"
@@ -120,6 +120,7 @@ func newThreadSelf(ctx context.Context, pidns *kernel.PIDNamespace, msrc *fs.Mou
 
 // Readlink implements fs.InodeOperations.Readlink.
 func (s *self) Readlink(ctx context.Context, inode *fs.Inode) (string, error) {
+	log.Infof("readlink in host")
 	if t := kernel.TaskFromContext(ctx); t != nil {
 		tgid := s.pidns.IDOfThreadGroup(t.ThreadGroup())
 		if tgid == 0 {

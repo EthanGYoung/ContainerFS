@@ -544,6 +544,7 @@ func (i *inodeOperations) WriteOut(ctx context.Context, inode *fs.Inode) error {
 
 // Readlink implements fs.InodeOperations.Readlink.
 func (i *inodeOperations) Readlink(ctx context.Context, inode *fs.Inode) (string, error) {
+	log.Infof("readlink in gofer")
 	if !fs.IsSymlink(inode.StableAttr) {
 		return "", syscall.ENOLINK
 	}

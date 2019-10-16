@@ -129,7 +129,7 @@ func (f *Filesystem) Mount(ctx context.Context, device string, flags fs.MountSou
 	}
 
 	// Construct a mount which will cache dirents.
-	msrc := fs.NewCachingMountSource(f, flags)
+	msrc := fs.NewCachingMountSource(f, flags, "tmpfs-root")
 
 	// Construct the tmpfs root.
 	return NewDir(ctx, nil, owner, perms, msrc), nil

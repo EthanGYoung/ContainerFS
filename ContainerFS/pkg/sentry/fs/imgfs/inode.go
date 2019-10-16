@@ -52,6 +52,7 @@ type fileInodeOperations struct {
 	offsetEnd int64
 
 	packageFD int
+
 }
 
 type Symlink struct {
@@ -225,16 +226,7 @@ func (f *fileInodeOperations) MapInternal(fr platform.FileRange, at usermem.Acce
 		unsafeEnd = boundary
 		//panic(fmt.Sprintf("invalid unsafeEnd: %v, current boundary: %v, unsafeBegin: %v, unsafeEnd: %v, fr.Start: %v, fr.End: %v, f.offsetBegin: %v, f.offsetEnd: %v\n", unsafeEnd, boundary, unsafeBegin, unsafeEnd, fr.Start, fr.End, f.offsetBegin, f.offsetEnd))
 	}
-
-	/*
-	if unsafeBegin > uint64(f.offsetEnd) {
-		return safemem.BlockSeq{}, syserror.EACCES
-	}
-
-	if unsafeEnd > uint64(f.offsetEnd) {
-		unsafeEnd = uint64(f.offsetEnd)
-	}
-	*/
+	
 	seq := safemem.BlockSeqOf(safemem.BlockFromSafeSlice(f.mapArea[unsafeBegin:unsafeEnd]))
 	return seq, nil
 }

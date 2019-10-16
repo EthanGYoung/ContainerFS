@@ -103,7 +103,7 @@ func NewOverlayRoot(ctx context.Context, upper *Inode, lower *Inode, flags Mount
 	if upper.overlay != nil {
 		return nil, fmt.Errorf("cannot nest overlay in upper file of another overlay")
 	}
-
+	log.Infof("Creating new overlay mountsrcs")
 	msrc := newOverlayMountSource(upper.MountSource, lower.MountSource, flags)
 	overlay, err := newOverlayEntry(ctx, upper, lower, true)
 	if err != nil {
@@ -196,10 +196,14 @@ type overlayEntry struct {
 	// these locks is sufficient to read upper; holding all three for writing
 	// is required to mutate it.
 	upper *Inode
+
 }
 
 // newOverlayEntry returns a new overlayEntry.
 func newOverlayEntry(ctx context.Context, upper *Inode, lower *Inode, lowerExists bool) (*overlayEntry, error) {
+	up := upper != nil
+	low := lower != nil
+	log.Infof("New overlayentry with upper: %v and lower: %v", up,(low))
 	if upper == nil && lower == nil {
 		panic("invalid overlayEntry, needs at least one Inode")
 	}

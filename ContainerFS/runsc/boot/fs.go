@@ -214,7 +214,7 @@ func addOverlay(ctx context.Context, conf *Config, lower *fs.Inode, name string,
 	tmpFS := mustFindFilesystem("tmpfs")
 	if !fs.IsDir(lower.StableAttr) {
 		// Create overlay on top of mount file, e.g. /etc/hostname.
-		msrc := fs.NewCachingMountSource(tmpFS, lowerFlags)
+		msrc := fs.NewCachingMountSource(tmpFS, lowerFlags, "overlay")
 		return fs.NewOverlayRootFile(ctx, msrc, lower, lowerFlags)
 	}
 
@@ -516,8 +516,8 @@ func addSubmountOverlay(ctx context.Context, inode *fs.Inode, submounts []string
 	if err != nil {
 		return nil, fmt.Errorf("creating mount tree: %v", err)
 	}
-	// overlayInode, err := fs.NewOverlayRoot(ctx, inode, mountTree, fs.MountSourceFlags{})
-overlayInode, err := fs.NewOverlayRoot(ctx, inode, mountTree, fs.MountSourceFlags{})
+
+	overlayInode, err := fs.NewOverlayRoot(ctx, inode, mountTree, fs.MountSourceFlags{})
 	if err != nil {
 		return nil, fmt.Errorf("adding mount overlay: %v", err)
 	}
@@ -717,6 +717,7 @@ func destroyContainerFS(ctx context.Context, cid string, k *kernel.Kernel) error
 func mountExpFS(ctx context.Context, layerFDs []int, submounts []string) (*fs.Inode, error) {
 	var currentNode *fs.Inode
 
+	// Construct initial tree
 	if submounts != nil {
 		msrc := fs.NewPseudoMountSource()
 		mountTree, err := ramfs.MakeDirectoryTree(ctx, msrc, submounts)
@@ -729,6 +730,7 @@ func mountExpFS(ctx context.Context, layerFDs []int, submounts []string) (*fs.In
 	flags := fs.MountSourceFlags{ReadOnly: true}
 	imgFS := mustFindFilesystem("imgfs")
 
+	// Create image fs layers
 	for index, lfd := range layerFDs {
 		log.Infof("About to mount an imgfs layer: " + strconv.Itoa(index))
 		imgfsNode, err := imgFS.Mount(ctx, "imgfs-layer-" + strconv.Itoa(index), flags, "packageFD=" + strconv.Itoa(lfd), nil)
@@ -739,9 +741,10 @@ func mountExpFS(ctx context.Context, layerFDs []int, submounts []string) (*fs.In
 		log.Infof("Creating imgfs overlay")
 	    if currentNode, err = fs.NewOverlayRoot(ctx, imgfsNode, currentNode, flags); err != nil {
 		    return nil, fmt.Errorf("creating imgfs overlay: %v", err)
-      }
-		} else {
-      currentNode = imgfsNode
+      	}
+	} else {
+		// Updates current node with current lower parent
+		currentNode = imgfsNode
     }
 	}
   if currentNode == nil {

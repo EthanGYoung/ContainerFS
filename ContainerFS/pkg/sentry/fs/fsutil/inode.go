@@ -17,6 +17,7 @@ package fsutil
 import (
 	"sync"
 
+	"gvisor.googlesource.com/gvisor/pkg/log"
 	"gvisor.googlesource.com/gvisor/pkg/sentry/context"
 	"gvisor.googlesource.com/gvisor/pkg/sentry/fs"
 	ktime "gvisor.googlesource.com/gvisor/pkg/sentry/kernel/time"
@@ -411,11 +412,13 @@ type InodeNotSymlink struct{}
 
 // Readlink implements fs.InodeOperations.Readlink.
 func (InodeNotSymlink) Readlink(context.Context, *fs.Inode) (string, error) {
+	log.Infof("Readlink in fsutil returning error")
 	return "", syserror.ENOLINK
 }
 
 // Getlink implements fs.InodeOperations.Getlink.
 func (InodeNotSymlink) Getlink(context.Context, *fs.Inode) (*fs.Dirent, error) {
+	log.Infof("Getlink in fsutil")
 	return nil, syserror.ENOLINK
 }
 

@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"sort"
 	"strconv"
+	"gvisor.googlesource.com/gvisor/pkg/log"
 
 	"gvisor.googlesource.com/gvisor/pkg/sentry/context"
 	"gvisor.googlesource.com/gvisor/pkg/sentry/fs"
@@ -118,6 +119,7 @@ func (f *fd) GetFile(context.Context, *fs.Dirent, fs.FileFlags) (*fs.File, error
 
 // Readlink returns the current target.
 func (f *fd) Readlink(ctx context.Context, _ *fs.Inode) (string, error) {
+	log.Infof("REadlink in fd?")
 	root := fs.RootFromContext(ctx)
 	defer root.DecRef()
 	n, _ := f.Dirent.FullName(root)

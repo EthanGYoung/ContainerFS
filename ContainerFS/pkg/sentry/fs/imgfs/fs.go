@@ -97,8 +97,9 @@ func (*Filesystem) Flags() fs.FilesystemFlags {
 
 // Mount returns an fs.Inode exposing the host file system.  It is intended to be locked
 // down in PreExec below.
-func (f *Filesystem) Mount(ctx context.Context, _ string, flags fs.MountSourceFlags, data string, _ interface{}) (*fs.Inode, error) {
-	log.Infof("Mounting imgfs root")
+// IDEA: Every time access imgFs inode, then print that accessing that
+func (f *Filesystem) Mount(ctx context.Context, layer string, flags fs.MountSourceFlags, data string, _ interface{}) (*fs.Inode, error) {
+	log.Infof("Mounting imgfs root for layer: %v", layer)
 
 	// Parse generic comma-separated key=value options.
 	options := fs.GenericMountSourceOptions(data)
@@ -125,7 +126,7 @@ func (f *Filesystem) Mount(ctx context.Context, _ string, flags fs.MountSourceFl
 	}
 
 	// Construct img file system mount and inode.
-	msrc := fs.NewCachingMountSource(f, flags)
+	msrc := fs.NewCachingMountSource(f, flags, layer)
 
 	var s syscall.Stat_t
 	err := syscall.Fstat(int(f.packageFD), &s)
@@ -141,7 +142,7 @@ func (f *Filesystem) Mount(ctx context.Context, _ string, flags fs.MountSourceFl
 	}
 
 	mmap, err := syscall.Mmap(int(f.packageFD), 0, length, syscall.PROT_READ|syscall.PROT_EXEC, syscall.MAP_SHARED)
-	//mmap, err := syscall.Mmap(int(f.packageFD), 0, length, syscall.PROT_READ, syscall.MAP_SHARED)
+
 	if err != nil {
         return nil, fmt.Errorf("can't mmap the package image file, packageFD: %v, length: %v, err: %v", int(f.packageFD), length, err)
 	}
@@ -157,11 +158,12 @@ func (f *Filesystem) Mount(ctx context.Context, _ string, flags fs.MountSourceFl
 	//readFiles(mmap, fileMetadata, detail)
 
 	i := 0 // What is this for?
-	return MountImgRecursive(ctx, msrc, filMetadata, os.ModeDir | 0555, mmap, f.packageFD, &i, len(filMetadata))
+	return MountImgRecursive(ctx, msrc, filMetadata, os.ModeDir | 0555, mmap, f.packageFD, &i, len(filMetadata), layer)
 }
 
 // MountImgRecursive generates inodes for files in the image file
-func MountImgRecursive(ctx context.Context, msrc *fs.MountSource, metadata []fileMetadata,dirMode os.FileMode, mmap []byte, packageFD int, i *int, length int) (*fs.Inode, error) {
+// TODO: Don't do this at boot
+func MountImgRecursive(ctx context.Context, msrc *fs.MountSource, metadata []fileMetadata,dirMode os.FileMode, mmap []byte, packageFD int, i *int, length int, layer string) (*fs.Inode, error) {
 	contents := map[string]*fs.Inode{}
 	var whitoutFiles []string
 	for *i < length {
@@ -172,7 +174,7 @@ func MountImgRecursive(ctx context.Context, msrc *fs.MountSource, metadata []fil
 		fileModTime := metadata[*i].ModTime
 		fileMode := metadata[*i].Mode
 
-		log.Infof("Processing file: " + fileName)
+		log.Infof("Processing file: " + fileName + " for layer: " + layer)
 
 		if fileType == ImgFSRegularFile {
 			log.Infof("Regular file")
@@ -187,7 +189,7 @@ func MountImgRecursive(ctx context.Context, msrc *fs.MountSource, metadata []fil
 			*i = *i + 1
 			if fileName != ".." {
 				var err error
-				contents[fileName], err = MountImgRecursive(ctx, msrc, metadata, fileMode, mmap, packageFD, i, length)
+				contents[fileName], err = MountImgRecursive(ctx, msrc, metadata, fileMode, mmap, packageFD, i, length, layer)
 				if err != nil {
 					return nil, fmt.Errorf("can't create recursive folder %v, err: %v", fileName, err)
 				}
@@ -208,7 +210,7 @@ func MountImgRecursive(ctx context.Context, msrc *fs.MountSource, metadata []fil
 		}
 	}
 
-	log.Infof("About to create new dir to hold imgfs mount")
+	log.Infof("About to create new dir to hold imgfs mount for layer: %v", layer)
 
 	d := ramfs.NewDir(ctx, contents, fs.RootOwner, fs.FilePermsFromMode(linux.FileMode(dirMode)))
 	newinode := fs.NewInode(d, msrc, fs.StableAttr{

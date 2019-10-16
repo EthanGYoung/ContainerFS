@@ -34,7 +34,7 @@ func newOverlayMountSource(upper, lower *MountSource, flags MountSourceFlags) *M
 	return NewMountSource(&overlayMountSourceOperations{
 		upper: upper,
 		lower: lower,
-	}, &overlayFilesystem{}, flags)
+	}, &overlayFilesystem{}, flags, "overlay-mount")
 }
 
 // Revalidate implements MountSourceOperations.Revalidate for an overlay by
@@ -104,6 +104,18 @@ type overlayFilesystem struct{}
 // Name implements Filesystem.Name.
 func (ofs *overlayFilesystem) Name() string {
 	return "overlayfs"
+}
+
+// Custom name for tracing bloom filters
+func (ofs *overlayFilesystem) CustomName() string {
+	return "Custom mount trace"
+}
+
+// TODO: Set cusome name
+
+// Custom name for tracing bloom filters
+func (ofs *overlayFilesystem) SetCustomName() string {
+	return "Custom mount trace"
 }
 
 // Flags implements Filesystem.Flags.

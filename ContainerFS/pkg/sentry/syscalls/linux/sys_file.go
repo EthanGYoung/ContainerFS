@@ -31,6 +31,7 @@ import (
 	"gvisor.googlesource.com/gvisor/pkg/sentry/limits"
 	"gvisor.googlesource.com/gvisor/pkg/sentry/usermem"
 	"gvisor.googlesource.com/gvisor/pkg/syserror"
+	"gvisor.googlesource.com/gvisor/pkg/log"
 )
 
 // fileOpAt performs an operation on the second last component in the path.
@@ -68,7 +69,7 @@ func fileOpOn(t *kernel.Task, dirFD kdefs.FD, path string, resolve bool, fn func
 		f   *fs.File   // The file corresponding to dirFD (if required.)
 		err error
 	)
-
+	log.Infof("Op on path: " + path)
 	// Extract the working directory (maybe).
 	if len(path) > 0 && path[0] == '/' {
 		// Absolute path; rel can be nil.
@@ -76,7 +77,10 @@ func fileOpOn(t *kernel.Task, dirFD kdefs.FD, path string, resolve bool, fn func
 		// Need to reference the working directory.
 		wd = t.FSContext().WorkingDirectory()
 		rel = wd
+		// TODO: CAN GET ABSOLUTE PATH
 	} else {
+		log.Infof("Extracting FD -> ALready open?")
+	
 		// Need to extract the given FD.
 		f = t.FDMap().GetFile(dirFD)
 		if f == nil {
@@ -94,8 +98,11 @@ func fileOpOn(t *kernel.Task, dirFD kdefs.FD, path string, resolve bool, fn func
 	// Lookup the node.
 	remainingTraversals := uint(linux.MaxSymlinkTraversals)
 	if resolve {
+		log.Infof("Resolving!")
 		d, err = t.MountNamespace().FindInode(t, root, rel, path, &remainingTraversals)
+		log.Infof("Done resolving")
 	} else {
+		log.Infof("Linking!")
 		d, err = t.MountNamespace().FindLink(t, root, rel, path, &remainingTraversals)
 	}
 	root.DecRef()
@@ -132,12 +139,14 @@ func copyInPath(t *kernel.Task, addr usermem.Addr, allowEmpty bool) (path string
 }
 
 func openAt(t *kernel.Task, dirFD kdefs.FD, addr usermem.Addr, flags uint) (fd uintptr, err error) {
+	log.Infof("OpenAt")
 	path, dirPath, err := copyInPath(t, addr, false /* allowEmpty */)
 	if err != nil {
 		return 0, err
 	}
 
 	resolve := flags&linux.O_NOFOLLOW == 0
+	// FLAG
 	err = fileOpOn(t, dirFD, path, resolve, func(root *fs.Dirent, d *fs.Dirent) error {
 		// First check a few things about the filesystem before trying to get the file
 		// reference.
@@ -177,6 +186,7 @@ func openAt(t *kernel.Task, dirFD kdefs.FD, addr usermem.Addr, flags uint) (fd u
 			}
 		}
 
+		log.Infof("Getting file in fileopon")
 		file, err := d.Inode.GetFile(t, d, fileFlags)
 		if err != nil {
 			return syserror.ConvertIntr(err, kernel.ERESTARTSYS)
@@ -1307,6 +1317,7 @@ func readlinkAt(t *kernel.Task, dirFD kdefs.FD, addr usermem.Addr, bufAddr userm
 
 // Readlink implements linux syscall readlink(2).
 func Readlink(t *kernel.Task, args arch.SyscallArguments) (uintptr, *kernel.SyscallControl, error) {
+	log.Infof("Reading link in syscalls")
 	addr := args[0].Pointer()
 	bufAddr := args[1].Pointer()
 	size := args[2].SizeT()

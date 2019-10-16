@@ -49,6 +49,8 @@ func overlayWriteOut(ctx context.Context, o *overlayEntry) error {
 // If name exists, it returns true if the Dirent is in the upper, false if the
 // Dirent is in the lower.
 func overlayLookup(ctx context.Context, parent *overlayEntry, inode *Inode, name string) (*Dirent, bool, error) {
+	log.Infof("overlayLookup for name: " + name)
+	
 	// Hot path. Avoid defers.
 	parent.copyMu.RLock()
 
@@ -67,11 +69,14 @@ func overlayLookup(ctx context.Context, parent *overlayEntry, inode *Inode, name
 
 	// Does the parent directory exist in the upper file system?
 	if parent.upper != nil {
+		log.Infof("Checking in upper fs: " + parent.upper.MountSource.name)
 		// First check if a file object exists in the upper file system.
 		// A file could have been created over a whiteout, so we need to
 		// check if something exists in the upper file system first.
 		child, err := parent.upper.Lookup(ctx, name)
+		log.Infof("Lookup complete in parent")
 		if err != nil && err != syserror.ENOENT {
+			log.Infof("Error on overlay lookup")
 			// We encountered an error that an overlay cannot handle,
 			// we must propagate it to the caller.
 			parent.copyMu.RUnlock()
@@ -81,6 +86,7 @@ func overlayLookup(ctx context.Context, parent *overlayEntry, inode *Inode, name
 			if child.IsNegative() {
 				negativeUpperChild = true
 			} else {
+				log.Infof("Found upper inode: " + child.Inode.MountSource.name)
 				upperInode = child.Inode
 				upperInode.IncRef()
 			}
@@ -122,8 +128,10 @@ func overlayLookup(ctx context.Context, parent *overlayEntry, inode *Inode, name
 	// the lower filesystem (e.g. device number, inode number) that were
 	// visible before a copy up.
 	if parent.lower != nil {
+		log.Infof("Checking in lower fs: " + parent.lower.MountSource.name)
 		// Check the lower file system.
 		child, err := parent.lower.Lookup(ctx, name)
+		log.Infof("Lookup complete in parent-lower")
 		// Same song and dance as above.
 		if err != nil && err != syserror.ENOENT {
 			// Don't leak resources.
@@ -137,9 +145,11 @@ func overlayLookup(ctx context.Context, parent *overlayEntry, inode *Inode, name
 			if !child.IsNegative() {
 				if upperInode == nil {
 					// If nothing was in the upper, use what we found in the lower.
+					log.Infof("Using lower inode: " + child.Inode.MountSource.name)
 					lowerInode = child.Inode
 					lowerInode.IncRef()
 				} else {
+					log.Infof("Using upper inode: " + upperInode.MountSource.name)
 					// If we have something from the upper, we can only use it if the types
 					// match.
 					// NOTE: Allow SpecialDirectories and Directories to merge.
@@ -207,6 +217,8 @@ func overlayLookup(ctx context.Context, parent *overlayEntry, inode *Inode, name
 }
 
 func overlayCreate(ctx context.Context, o *overlayEntry, parent *Dirent, name string, flags FileFlags, perm FilePermissions) (*File, error) {
+	
+	log.Infof("overlayCreate -> Called when new file made")
 	// Dirent.Create takes renameMu if the Inode is an overlay Inode.
 	if err := copyUpLockedForRename(ctx, parent); err != nil {
 		return nil, err
@@ -441,6 +453,7 @@ func overlayBoundEndpoint(o *overlayEntry, path string) transport.BoundEndpoint 
 	return o.lower.InodeOperations.BoundEndpoint(o.lower, path)
 }
 
+// TODO: Here it is
 func overlayGetFile(ctx context.Context, o *overlayEntry, d *Dirent, flags FileFlags) (*File, error) {
 	// Hot path. Avoid defers.
 	if flags.Write {
@@ -452,6 +465,7 @@ func overlayGetFile(ctx context.Context, o *overlayEntry, d *Dirent, flags FileF
 	o.copyMu.RLock()
 
 	if o.upper != nil {
+		log.Infof("Get file in upper overlay: %v", o.upper.MountSource.name)
 		upper, err := overlayFile(ctx, o.upper, flags)
 		if err != nil {
 			o.copyMu.RUnlock()
@@ -464,6 +478,7 @@ func overlayGetFile(ctx context.Context, o *overlayEntry, d *Dirent, flags FileF
 		return f, err
 	}
 
+	log.Infof("Get file in lower overlay: %v", o.lower.MountSource.name)
 	lower, err := overlayFile(ctx, o.lower, flags)
 	if err != nil {
 		o.copyMu.RUnlock()
@@ -586,12 +601,15 @@ func overlayReadlink(ctx context.Context, o *overlayEntry) (string, error) {
 	o.copyMu.RLock()
 	defer o.copyMu.RUnlock()
 	if o.upper != nil {
+		log.Infof("Readinglink in upper")
 		return o.upper.Readlink(ctx)
 	}
+	log.Infof("Reading link in lower")
 	return o.lower.Readlink(ctx)
 }
 
 func overlayGetlink(ctx context.Context, o *overlayEntry) (*Dirent, error) {
+	log.Infof("overlayGetLink called")
 	var dirent *Dirent
 	var err error
 
@@ -599,10 +617,13 @@ func overlayGetlink(ctx context.Context, o *overlayEntry) (*Dirent, error) {
 	defer o.copyMu.RUnlock()
 
 	if o.upper != nil {
+		log.Infof("Upper FS in OverlayGetLink")
 		dirent, err = o.upper.Getlink(ctx)
 	} else {
+		log.Infof("Upper FS in OverlayGetLink")
 		dirent, err = o.lower.Getlink(ctx)
 	}
+	
 	if dirent != nil {
 		// This dirent is likely bogus (its Inode likely doesn't contain
 		// the right overlayEntry). So we're forced to drop it on the
@@ -613,8 +634,9 @@ func overlayGetlink(ctx context.Context, o *overlayEntry) (*Dirent, error) {
 
 		// Claim that the path is not accessible.
 		err = syserror.EACCES
-		log.Warningf("Getlink not supported in overlay for %q", name)
+		log.Infof("Getlink not supported in overlay for %q", name)
 	}
+	log.Infof("returning from overlayGetlink")
 	return nil, err
 }
 
@@ -653,7 +675,7 @@ func NewTestOverlayDir(ctx context.Context, upper, lower *Inode, revalidate bool
 	msrc := NewMountSource(&overlayMountSourceOperations{
 		upper: upperMsrc,
 		lower: NewNonCachingMountSource(fs, MountSourceFlags{}),
-	}, fs, MountSourceFlags{})
+	}, fs, MountSourceFlags{},"")
 	overlay := &overlayEntry{
 		upper: upper,
 		lower: lower,

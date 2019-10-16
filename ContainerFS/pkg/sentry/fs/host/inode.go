@@ -19,6 +19,7 @@ import (
 	"syscall"
 
 	"gvisor.googlesource.com/gvisor/pkg/abi/linux"
+	"gvisor.googlesource.com/gvisor/pkg/log"
 	"gvisor.googlesource.com/gvisor/pkg/fd"
 	"gvisor.googlesource.com/gvisor/pkg/secio"
 	"gvisor.googlesource.com/gvisor/pkg/sentry/context"
@@ -411,6 +412,7 @@ func (i *inodeOperations) WriteOut(ctx context.Context, inode *fs.Inode) error {
 
 // Readlink implements fs.InodeOperations.Readlink.
 func (i *inodeOperations) Readlink(ctx context.Context, inode *fs.Inode) (string, error) {
+	log.Infof("readlink in host")
 	return readLink(i.fileState.FD())
 }
 

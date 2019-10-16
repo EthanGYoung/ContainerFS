@@ -48,6 +48,7 @@ func overlayFile(ctx context.Context, inode *Inode, flags FileFlags) (*File, err
 	// we just took on the Inode above.
 	dirent := NewTransientDirent(inode)
 
+	log.Infof("Getting file in overlayFile")
 	// Get a File. This will take another reference on the Dirent.
 	f, err := inode.GetFile(ctx, dirent, flags)
 

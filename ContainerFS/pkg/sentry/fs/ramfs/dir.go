@@ -19,6 +19,7 @@ import (
 	"sync"
 	"syscall"
 
+	"gvisor.googlesource.com/gvisor/pkg/log"
 	"gvisor.googlesource.com/gvisor/pkg/abi/linux"
 	"gvisor.googlesource.com/gvisor/pkg/sentry/context"
 	"gvisor.googlesource.com/gvisor/pkg/sentry/fs"
@@ -234,6 +235,7 @@ func (d *Dir) RemoveDirectory(ctx context.Context, _ *fs.Inode, name string) err
 
 // Lookup loads an inode at p into a Dirent.
 func (d *Dir) Lookup(ctx context.Context, _ *fs.Inode, p string) (*fs.Dirent, error) {
+	log.Infof("Lookup in ramfs occurring for " + p)
 	d.mu.Lock()
 	defer d.mu.Unlock()
 

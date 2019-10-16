@@ -357,7 +357,7 @@ func (mns *MountNamespace) FindLink(ctx context.Context, root, wd *Dirent, path 
 	if len(path) == 0 {
 		panic("MountNamespace.FindLink: path is empty")
 	}
-
+	log.Infof("Finding link in mountspace")
 	// Split the path.
 	first, remainder := SplitFirst(path)
 
@@ -419,6 +419,7 @@ func (mns *MountNamespace) FindLink(ctx context.Context, root, wd *Dirent, path 
 			//
 			// See resolve for reference semantics; on err next
 			// will have one dropped.
+			log.Infof("About to resolve last stage")
 			current, err = mns.resolve(ctx, root, next, remainingTraversals)
 			if err != nil {
 				return nil, err
@@ -459,6 +460,7 @@ func (mns *MountNamespace) FindInode(ctx context.Context, root, wd *Dirent, path
 // returned. This is for convenience in using resolve directly as a return
 // value.
 func (mns *MountNamespace) resolve(ctx context.Context, root, node *Dirent, remainingTraversals *uint) (*Dirent, error) {
+	log.Infof("resolving link: " + node.Inode.MountSource.name)
 	// Resolve the path.
 	target, err := node.Inode.Getlink(ctx)
 
@@ -471,14 +473,17 @@ func (mns *MountNamespace) resolve(ctx context.Context, root, node *Dirent, rema
 		}
 
 		node.DecRef() // Drop the original reference.
+		log.Infof("Dirent ret: " + target.Inode.MountSource.name)
 		return target, nil
 
 	case syscall.ENOLINK:
+		log.Infof("Not sym")
 		// Not a symlink.
 		return node, nil
 
 	case ErrResolveViaReadlink:
 		defer node.DecRef() // See above.
+		log.Infof("Readlink?")
 
 		// First, check if we should traverse.
 		if *remainingTraversals == 0 {
@@ -491,6 +496,8 @@ func (mns *MountNamespace) resolve(ctx context.Context, root, node *Dirent, rema
 			return nil, err
 		}
 
+		log.Infof("targetPath: " + targetPath)
+
 		// Find the node; we resolve relative to the current symlink's parent.
 		*remainingTraversals--
 		d, err := mns.FindInode(ctx, root, node.parent, targetPath, remainingTraversals)
@@ -501,6 +508,7 @@ func (mns *MountNamespace) resolve(ctx context.Context, root, node *Dirent, rema
 		return d, err
 
 	default:
+		log.Infof("default")
 		node.DecRef() // Drop for err; see above.
 
 		// Propagate the error.

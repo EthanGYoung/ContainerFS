@@ -21,7 +21,7 @@ import (
 	"sync"
 	"sync/atomic"
 	"syscall"
-
+	"gvisor.googlesource.com/gvisor/pkg/log"
 	"gvisor.googlesource.com/gvisor/pkg/abi/linux"
 	"gvisor.googlesource.com/gvisor/pkg/refs"
 	"gvisor.googlesource.com/gvisor/pkg/sentry/context"
@@ -455,6 +455,7 @@ func (d *Dirent) descendantOf(p *Dirent) bool {
 // - d.mu must be held.
 // - name must must not contain "/"s.
 func (d *Dirent) walk(ctx context.Context, root *Dirent, name string, walkMayUnlock bool) (*Dirent, error) {
+	log.Infof("Walking to dirent with name: " + name + " with d as: " + d.name)
 	if !IsDir(d.Inode.StableAttr) {
 		return nil, syscall.ENOTDIR
 	}
@@ -503,6 +504,7 @@ func (d *Dirent) walk(ctx context.Context, root *Dirent, name string, walkMayUnl
 			// We never allow the file system to revalidate mounts, that could cause them
 			// to unexpectedly drop out before umount.
 			if cd.mounted || !cd.Inode.MountSource.Revalidate(ctx, name, d.Inode, cd.Inode) {
+				log.Infof("Fast path")
 				// Good to go. This is the fast-path.
 				return cd, nil
 			}
@@ -537,7 +539,9 @@ func (d *Dirent) walk(ctx context.Context, root *Dirent, name string, walkMayUnl
 	if walkMayUnlock {
 		d.mu.Unlock()
 	}
+	log.Infof("About to Lookup name")
 	c, err := d.Inode.Lookup(ctx, name)
+	log.Infof("Returned from lookup")
 	if walkMayUnlock {
 		d.mu.Lock()
 	}
@@ -595,6 +599,7 @@ func (d *Dirent) walk(ctx context.Context, root *Dirent, name string, walkMayUnl
 		// only reference we'll ever get. d owns the reference.
 		return nil, syscall.ENOENT
 	}
+	log.Infof("Returning positive dirent")
 
 	// Return the positive Dirent.
 	return c, nil

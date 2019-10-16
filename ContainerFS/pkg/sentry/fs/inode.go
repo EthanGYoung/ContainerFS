@@ -152,7 +152,9 @@ func (i *Inode) WriteOut(ctx context.Context) error {
 // Lookup calls i.InodeOperations.Lookup with i as the directory.
 func (i *Inode) Lookup(ctx context.Context, name string) (*Dirent, error) {
 	if i.overlay != nil {
+		log.Infof("About to overlayLookup")
 		d, _, err := overlayLookup(ctx, i.overlay, i, name)
+		log.Infof("done overlayLooking")
 		return d, err
 	}
 	return i.InodeOperations.Lookup(ctx, i, name)
@@ -238,9 +240,11 @@ func (i *Inode) BoundEndpoint(path string) transport.BoundEndpoint {
 // GetFile calls i.InodeOperations.GetFile with the given arguments.
 func (i *Inode) GetFile(ctx context.Context, d *Dirent, flags FileFlags) (*File, error) {
 	if i.overlay != nil {
+		log.Infof("About to call overlayGetFile")
 		return overlayGetFile(ctx, i.overlay, d, flags)
 	}
 	opens.Increment()
+	log.Infof("Getting file, probably from ramfs")
 	return i.InodeOperations.GetFile(ctx, d, flags)
 }
 
@@ -342,17 +346,28 @@ func (i *Inode) Truncate(ctx context.Context, d *Dirent, size int64) error {
 
 // Readlink calls i.InodeOperations.Readlnk with i as the Inode.
 func (i *Inode) Readlink(ctx context.Context) (string, error) {
+
 	if i.overlay != nil {
+		log.Infof("Calling overlayReadlink from Inode")
 		return overlayReadlink(ctx, i.overlay)
 	}
+	log.Infof("Calling readlink from inode readlink")
 	return i.InodeOperations.Readlink(ctx, i)
 }
 
 // Getlink calls i.InodeOperations.Getlink.
 func (i *Inode) Getlink(ctx context.Context) (*Dirent, error) {
 	if i.overlay != nil {
+		if (i.overlay.upper != nil) {
+			log.Infof("Getting link in inode.go on overlay with upper: %v", (i.overlay.upper.MountSource.name))
+		} 
+		if (i.overlay.lower != nil) {
+			log.Infof("Getting link in inode.go on overlay with lower: %v", (i.overlay.lower.MountSource.name))
+		} 
+
 		return overlayGetlink(ctx, i.overlay)
 	}
+	log.Infof("Getting Link")
 	return i.InodeOperations.Getlink(ctx, i)
 }
 
