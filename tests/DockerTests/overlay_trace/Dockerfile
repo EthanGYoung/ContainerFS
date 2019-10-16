@@ -8,6 +8,7 @@ COPY ./test-trace/img5/ /imgs
 COPY ./test-trace/img6/ /imgs
 COPY ./test-trace/img7/ /imgs
 COPY ./test-trace/img8/ /imgs
-COPY . /usr/src/python_trace
+RUN mkdir /usr/src/python_trace
+COPY ./trace_layer.py /usr/src/python_trace
 WORKDIR /usr/src/python_trace
 CMD [ "python","./trace_layer.py" ]
