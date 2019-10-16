@@ -455,6 +455,7 @@ func (d *Dirent) descendantOf(p *Dirent) bool {
 // - d.mu must be held.
 // - name must must not contain "/"s.
 func (d *Dirent) walk(ctx context.Context, root *Dirent, name string, walkMayUnlock bool) (*Dirent, error) {
+	log.Infof("TRACE-dirent_walk-(root=" + d.name + ", target=" + name + ")")
 	log.Infof("Walking to dirent with name: " + name + " with d as: " + d.name)
 	if !IsDir(d.Inode.StableAttr) {
 		return nil, syscall.ENOTDIR
@@ -484,10 +485,12 @@ func (d *Dirent) walk(ctx context.Context, root *Dirent, name string, walkMayUnl
 		return d.parent, nil
 	}
 
+
 	if w, ok := d.children[name]; ok {
 		// Try to resolve the weak reference to a hard reference.
 		if child := w.Get(); child != nil {
 			cd := child.(*Dirent)
+			log.Infof("cd.name: " + cd.name)
 
 			// Is this a negative Dirent?
 			if cd.IsNegative() {
@@ -504,7 +507,7 @@ func (d *Dirent) walk(ctx context.Context, root *Dirent, name string, walkMayUnl
 			// We never allow the file system to revalidate mounts, that could cause them
 			// to unexpectedly drop out before umount.
 			if cd.mounted || !cd.Inode.MountSource.Revalidate(ctx, name, d.Inode, cd.Inode) {
-				log.Infof("Fast path")
+				log.Infof("Fast path -> Already accessed once, so hold a reference")
 				// Good to go. This is the fast-path.
 				return cd, nil
 			}

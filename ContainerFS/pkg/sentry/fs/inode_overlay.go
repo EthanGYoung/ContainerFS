@@ -70,6 +70,7 @@ func overlayLookup(ctx context.Context, parent *overlayEntry, inode *Inode, name
 	// Does the parent directory exist in the upper file system?
 	if parent.upper != nil {
 		log.Infof("Checking in upper fs: " + parent.upper.MountSource.name)
+		log.Infof("TRACE-layer_lookup-" + parent.upper.MountSource.name)
 		// First check if a file object exists in the upper file system.
 		// A file could have been created over a whiteout, so we need to
 		// check if something exists in the upper file system first.
@@ -86,6 +87,7 @@ func overlayLookup(ctx context.Context, parent *overlayEntry, inode *Inode, name
 			if child.IsNegative() {
 				negativeUpperChild = true
 			} else {
+				log.Infof("TRACE-lookup_match-" + child.Inode.MountSource.name)
 				log.Infof("Found upper inode: " + child.Inode.MountSource.name)
 				upperInode = child.Inode
 				upperInode.IncRef()

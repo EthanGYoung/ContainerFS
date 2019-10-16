@@ -69,6 +69,9 @@ func fileOpOn(t *kernel.Task, dirFD kdefs.FD, path string, resolve bool, fn func
 		f   *fs.File   // The file corresponding to dirFD (if required.)
 		err error
 	)
+
+	log.Infof("TRACE-Original_Path-" + path)
+
 	log.Infof("Op on path: " + path)
 	// Extract the working directory (maybe).
 	if len(path) > 0 && path[0] == '/' {
