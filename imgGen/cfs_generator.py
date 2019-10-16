@@ -15,6 +15,7 @@ if __name__ == "__main__":
 	# print(image_info)
 
 	data = image_info["GraphDriver"]["Data"]
+	print(image_info)
 
 	if "LowerDir" in data:
 		dirs = data["LowerDir"].split(":")
