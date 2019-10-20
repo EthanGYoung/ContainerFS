@@ -23,6 +23,7 @@ import (
 
 	"gvisor.googlesource.com/gvisor/pkg/refs"
 	"gvisor.googlesource.com/gvisor/pkg/sentry/context"
+	"gvisor.googlesource.com/gvisor/pkg/filter"
 )
 
 // DirentOperations provide file systems greater control over how long a Dirent stays pinned
@@ -153,6 +154,9 @@ type MountSource struct {
 
 	// Name of this mount -> Often the layer name for debugging
 	name string
+
+	// BloomFilter for this layer
+	BloomFilter filter.BloomFilter
 }
 
 // defaultDirentCacheSize is the number of Dirents that the VFS can hold an extra

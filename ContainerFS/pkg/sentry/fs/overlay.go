@@ -199,6 +199,7 @@ type overlayEntry struct {
 
 }
 
+
 // newOverlayEntry returns a new overlayEntry.
 func newOverlayEntry(ctx context.Context, upper *Inode, lower *Inode, lowerExists bool) (*overlayEntry, error) {
 	up := upper != nil

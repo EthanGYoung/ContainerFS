@@ -70,7 +70,9 @@ func fileOpOn(t *kernel.Task, dirFD kdefs.FD, path string, resolve bool, fn func
 		err error
 	)
 
+	// TODO: Assume always absolute path
 	log.Infof("TRACE-Original_Path-" + path)
+
 
 	log.Infof("Op on path: " + path)
 	// Extract the working directory (maybe).
@@ -98,6 +100,11 @@ func fileOpOn(t *kernel.Task, dirFD kdefs.FD, path string, resolve bool, fn func
 	// Grab the root (always required.)
 	root := t.FSContext().RootDirectory()
 
+	// Update root with BF results
+	if (path == "/imgs/dir2/img8-8563") {
+		bfTest(path, root)
+	}
+
 	// Lookup the node.
 	remainingTraversals := uint(linux.MaxSymlinkTraversals)
 	if resolve {
@@ -122,6 +129,12 @@ func fileOpOn(t *kernel.Task, dirFD kdefs.FD, path string, resolve bool, fn func
 	err = fn(root, d)
 	d.DecRef()
 	return err
+}
+
+func bfTest(path string, root *fs.Dirent) {
+	log.Infof("bfTest called on " + path)
+	i := root.Inode
+	i.CheckOverlay(path)
 }
 
 // copyInPath copies a path in.

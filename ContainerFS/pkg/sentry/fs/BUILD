@@ -47,6 +47,7 @@ go_library(
         "//pkg/abi/linux",
         "//pkg/amutex",
         "//pkg/ilist",
+        "//pkg/filter",
         "//pkg/log",
         "//pkg/metric",
         "//pkg/p9",

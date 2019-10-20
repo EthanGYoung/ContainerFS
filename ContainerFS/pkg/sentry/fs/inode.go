@@ -25,6 +25,8 @@ import (
 	"gvisor.googlesource.com/gvisor/pkg/sentry/memmap"
 	"gvisor.googlesource.com/gvisor/pkg/sentry/socket/unix/transport"
 	"gvisor.googlesource.com/gvisor/pkg/syserror"
+
+	"strings"
 )
 
 var opens = metric.MustCreateNewUint64Metric("/fs/opens", false /* sync */, "Number of file opens.")
@@ -57,6 +59,51 @@ type Inode struct {
 	overlay *overlayEntry
 }
 
+// TESTING BFS
+func (i *Inode) CheckOverlay(path string) (*Inode)  {
+	// Base case (No more overlays)
+	if (i.overlay == nil) {
+		return i
+	}
+
+	u := i.overlay.upper
+	l := i.overlay.lower
+
+	if (u != nil) {
+		log.Infof("Upper in msrc: " + u.MountSource.name)
+		if (strings.Contains(u.MountSource.name, "imgfs")) {
+			if (!checkBF(u, path)) {
+				// Path not in layer
+				// TODO: Does this erase for subsequent lookups, too? Like will all other lookups in root not check this layer
+				//		- Possibly, need to manipulate the dirents (in-mem) and not the inodes
+				i.overlay.upper = nil
+			}
+		}
+	}
+	if (l != nil) {
+		log.Infof("Lower in msrc: " + l.MountSource.name)
+		// Recursively create tree
+		i.overlay.lower = l.CheckOverlay(path)
+	}
+	if (u == nil && l == nil) {
+		log.Infof("Both msrc is nil")
+	}
+
+	log.Infof("Returning from CheckOverlay")
+
+	return i
+}
+
+func checkBF(i *Inode, path string) (bool) {
+	bf := i.MountSource.BloomFilter
+	log.Infof("TRACE-bf_lookup-" + i.MountSource.name)
+
+	if (bf.TestElement([]byte(path))) {
+		log.Infof("Found in upper BF")
+	}
+
+	return bf.TestElement([]byte(path))
+}
 // LockCtx is an Inode's lock context and contains different personalities of locks; both
 // Posix and BSD style locks are supported.
 //

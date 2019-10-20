@@ -149,9 +149,11 @@ func (f *Filesystem) Mount(ctx context.Context, layer string, flags fs.MountSour
 
 	// Decode Filter Metadata and read in filter
 	filtMetadata := processFilterHeader(mmap, length)
-	length = readFilter(mmap, filtMetadata)
+	bf, length := readFilter(mmap, filtMetadata)
 
 	// TODO: Update fs struct with filter
+	log.Infof("Adding BF to layer: " + layer)
+	msrc.BloomFilter = bf
 
 	// Decode file metadata and read in files
 	filMetadata := processFileHeader(mmap, length)
@@ -274,7 +276,7 @@ func getHeaderLocation(mmap []byte, length int) (int64) {
 }
 
 // readFilter decodes the filter (bloom filter default) from the image file and intializes the filter
-func readFilter(mmap []byte, filtMetadata filter.FilterMetadata) (int) {
+func readFilter(mmap []byte, filtMetadata filter.FilterMetadata) (filter.BloomFilter, int) {
 	// Find location of filter struct
 	filtLoc := filtMetadata.FilterLoc
 	filtSize := filtMetadata.FilterStructSize
@@ -300,7 +302,7 @@ func readFilter(mmap []byte, filtMetadata filter.FilterMetadata) (int) {
 	// Print
 	log.Infof("filter data decoded:", bf)
 
-	return int(start) // Where next offset is
+	return bf, int(start) // Where next offset is
 }
 
 func processFileHeader(mmap []byte, length int) ([]fileMetadata) {
