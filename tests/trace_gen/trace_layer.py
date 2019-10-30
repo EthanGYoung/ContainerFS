@@ -62,16 +62,20 @@ def GenTrace(lines, layers, path):
 		sp = line.split("-", 2)
 		
 		if (sp[1] == BF_LOOKUP):
+			# A Bloom Filter lookup is performed
 			layers[sp[2]][path] = count
 			count += 1
 		elif (sp[1] == LAYER_LOOKUP):
+			# Performs a lookup in a specific layer
 			layers[sp[2]][target] = count
 			count += 1
 		elif (sp[1] == DIRENT_WALK or sp[1] == CACHED_WALK):
+			# Walks overlay tree with a 'root' and 'target'
 			targ = sp[2].split("target=")
 			targ = targ[1][:len(targ[1])-1] # Remove ")"
 			target = targ
 		elif(sp[1] == GET_FILE):
+			# Returns the file found
 			layers[sp[2]][target] = str(layers[sp[2]][target]) +  "*"
 
 	return layers

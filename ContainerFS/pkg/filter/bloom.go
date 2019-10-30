@@ -9,6 +9,8 @@ const(
 	DEFAULT_PROB = 0.000001
 )
 
+// TODO: Hash in directories
+
 // BloomFilter is a struct for creating a Bloom filter for an image file. A
 // A Bloom filter specifies whether a specific file path is "definitily" not
 // in the image file or is "maybe" in the file with a certain probability. 
