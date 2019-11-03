@@ -5,7 +5,7 @@ all:
 
 run:
 	sudo rm -rf /tmp/runsc
-	sudo docker run --runtime=runsc cfs-boot
+	sudo docker run --runtime=runsc cfs-boot python /usr/src/python_trace/trace_layer.py $(FILE)
 
 build:
 	sudo rm -rf /tmp/runsc
