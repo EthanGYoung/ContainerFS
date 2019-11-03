@@ -153,6 +153,30 @@ func (s *Sandbox) StartRoot(spec *specs.Spec, conf *boot.Config) error {
 	return nil
 }
 
+type byImg []string
+
+func (b byImg) Len() int {
+	return len(b)
+}
+
+func (b byImg) Swap(i, j int) {
+	b[i], b[j] = b[j], b[i]
+}
+
+func (b byImg) Less(i, j int) bool {
+	str1 := strings.Split(b[i], "/")
+	str2 := strings.Split(b[j], "/")
+
+	l_str1 := strings.Split(str1[len(str1)-1], ".")[0]
+	l_str2 := strings.Split(str2[len(str2)-1], ".")[0]
+
+	int1, _ := strconv.Atoi(l_str1)
+	int2, _ := strconv.Atoi(l_str2)
+
+	return int1 < int2
+
+}
+
 // StartContainer starts running a non-root container inside the sandbox.
 func (s *Sandbox) StartContainer(spec *specs.Spec, conf *boot.Config, cid string, goferFiles []*os.File) error {
 	for _, f := range goferFiles {
@@ -407,9 +431,10 @@ func (s *Sandbox) createSandboxProcess(spec *specs.Spec, conf *boot.Config, bund
         }
     }
     // Layers have their order. We assume the layer with lower ascii order is the lower layer. e.g. layer1.img > layer2.img > layer3.img
-    sort.Strings(layers)
+    sort.Sort(byImg(layers))
     for _, layer := range layers {
-        layerFile, err := os.OpenFile(path.Join(spec.Root.Path, layer), os.O_RDONLY, 0644)
+		layerFile, err := os.OpenFile(path.Join(spec.Root.Path, layer), os.O_RDONLY, 0644)
+		log.Infof("Processing layer file: %v", path.Join(spec.Root.Path, layer))
         if err != nil {
 		    return fmt.Errorf("opening layer file: %v", err)
 	    }
