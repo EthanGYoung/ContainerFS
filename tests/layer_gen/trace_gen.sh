@@ -1,7 +1,7 @@
 #!/bin/bash
 
 num_imgs=9
-num_files_per_img=10000
+num_files_per_img=1000
 
 for (( i=0; i<$num_imgs; i++ ))
 do
@@ -20,7 +20,7 @@ do
 		txt="Random txt"
 		dir="dir1"
 			
-		if [ "$j" -gt 4999 ]
+		if [ "$j" -gt 499 ]
 		then
 			dir="dir2"
 		fi

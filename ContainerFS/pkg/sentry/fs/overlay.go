@@ -136,6 +136,12 @@ func NewOverlayRootFile(ctx context.Context, upperMS *MountSource, lower *Inode,
 	return newOverlayInode(ctx, overlay, msrc), nil
 }
 
+func NewPseudoOverlayInode(ctx context.Context, lower *Inode, msrc *MountSource) *Inode {
+
+	o, _ := newOverlayEntry(ctx, nil, lower, true)
+	return newOverlayInode(ctx, o, msrc) 
+}
+
 // newOverlayInode creates a new Inode for an overlay.
 func newOverlayInode(ctx context.Context, o *overlayEntry, msrc *MountSource) *Inode {
 	var inode *Inode

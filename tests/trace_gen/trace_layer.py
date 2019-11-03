@@ -93,8 +93,6 @@ def PrintTrace(layers, components, path):
 
 
 if __name__== "__main__":
-	print("Hello world from ContainerFS python!")
-
 	# Process args
 	args = parser.parse_args()
 	print("Opening file with path: " + str(args.file))

@@ -170,10 +170,10 @@ if __name__ == "__main__":
 		if (file_stats["Match_length"] != "N/A"):
 			file_stats["Match_length"] -= 1 # Since extra '/' in file names
 
-		print("	Num dirs with match in lower layer: ", dir_stats["Matches"], " Percent of dirs in this layer with match: ", percent(dir_stats["Matches"], num_dirs(layer_dir) + 1), "%")
+		print("	Num dirs with match in lower layer: ", dir_stats["Matches"], "," , percent(dir_stats["Matches"], num_dirs(layer_dir) + 1), "%")
 		print("		Average path length matched: ", dir_stats["Match_length"])
 		print("		Average num layers matched: ", dir_stats["Match_layers"])
-		print("	Num files with match in lower layer: ", file_stats["Matches"], " Percent of files in this layer with match: ", percent(file_stats["Matches"], num_files(layer_dir)), "%")
+		print("	Num files with match in lower layer: ", file_stats["Matches"],",", percent(file_stats["Matches"], num_files(layer_dir)), "%")
 		print("		Average path length matched: ", file_stats["Match_length"]) 
 		print("		Average num layers matched: ", file_stats["Match_layers"])
 		print()

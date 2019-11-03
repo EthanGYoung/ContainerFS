@@ -153,6 +153,7 @@ func (s *Sandbox) StartRoot(spec *specs.Spec, conf *boot.Config) error {
 	return nil
 }
 
+// Used for sorting the layers
 type byImg []string
 
 func (b byImg) Len() int {

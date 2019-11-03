@@ -732,7 +732,7 @@ func mountExpFS(ctx context.Context, layerFDs []int, submounts []string) (*fs.In
 
 	// Create image fs layers
 	for index, lfd := range layerFDs {
-		log.Infof("About to mount an imgfs layer: " + strconv.Itoa(index))
+		log.Infof("About to mount an imgfs layer: " + strconv.Itoa(index) + " and layerFD: " + strconv.Itoa(lfd))
 		imgfsNode, err := imgFS.Mount(ctx, "imgfs-layer-" + strconv.Itoa(index), flags, "packageFD=" + strconv.Itoa(lfd), nil)
 		if err != nil {
 			return nil, fmt.Errorf("mounting imgfs layer %v, layerFD %v, err: %v", index, lfd, err)

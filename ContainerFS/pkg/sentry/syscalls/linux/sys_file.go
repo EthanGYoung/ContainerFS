@@ -34,6 +34,10 @@ import (
 	"gvisor.googlesource.com/gvisor/pkg/log"
 )
 
+const (
+	HORIZONTAL = true
+)
+
 // fileOpAt performs an operation on the second last component in the path.
 func fileOpAt(t *kernel.Task, dirFD kdefs.FD, path string, fn func(root *fs.Dirent, d *fs.Dirent, name string) error) error {
 	// Extract the last component.
@@ -60,6 +64,7 @@ func fileOpAt(t *kernel.Task, dirFD kdefs.FD, path string, fn func(root *fs.Dire
 	})
 }
 
+
 // fileOpOn performs an operation on the last entry of the path.
 func fileOpOn(t *kernel.Task, dirFD kdefs.FD, path string, resolve bool, fn func(root *fs.Dirent, d *fs.Dirent) error) error {
 	var (
@@ -84,7 +89,7 @@ func fileOpOn(t *kernel.Task, dirFD kdefs.FD, path string, resolve bool, fn func
 		rel = wd
 		// TODO: CAN GET ABSOLUTE PATH
 	} else {
-		log.Infof("Extracting FD -> ALready open?")
+		log.Infof("Extracting FD -> Already open?")
 	
 		// Need to extract the given FD.
 		f = t.FDMap().GetFile(dirFD)
@@ -102,19 +107,26 @@ func fileOpOn(t *kernel.Task, dirFD kdefs.FD, path string, resolve bool, fn func
 
 	// Update root with BF results
 	if (path == "/imgs/dir2/img8-8563") {
+		// TODO: Change this to return a dirent or just change to modify root (use is subsequent steps)
 		bfTest(path, root)
 	}
 
-	// Lookup the node.
 	remainingTraversals := uint(linux.MaxSymlinkTraversals)
-	if resolve {
-		log.Infof("Resolving!")
-		d, err = t.MountNamespace().FindInode(t, root, rel, path, &remainingTraversals)
-		log.Infof("Done resolving")
+	// Implement horizontal search
+	if (HORIZONTAL) {
+		d = horizontalTraverse(t, t, root, rel, path, resolve, &remainingTraversals)
 	} else {
-		log.Infof("Linking!")
-		d, err = t.MountNamespace().FindLink(t, root, rel, path, &remainingTraversals)
+		// Lookup the node.
+		if resolve {
+			log.Infof("Resolving!")
+			d, err = t.MountNamespace().FindInode(t, root, rel, path, &remainingTraversals)
+			log.Infof("Done resolving")
+		} else {
+			log.Infof("Linking!")
+			d, err = t.MountNamespace().FindLink(t, root, rel, path, &remainingTraversals)
+		}
 	}
+
 	root.DecRef()
 	if wd != nil {
 		wd.DecRef()
@@ -135,6 +147,30 @@ func bfTest(path string, root *fs.Dirent) {
 	log.Infof("bfTest called on " + path)
 	i := root.Inode
 	i.CheckOverlay(path)
+}
+
+// Returns a dentry if found
+func horizontalTraverse(t *kernel.Task, ctx context.Context, root, rel *fs.Dirent, path string, resolve bool, remainingTraversals *uint) (*fs.Dirent) {
+	var d *fs.Dirent
+	// Creates a pseudo root overlay with only 1 layer lower layer
+	for _, layer := range root.Inode.HorizontalTraverse(ctx, root) {
+		// Lookup the node. TODO: Check if need &remainingTraversals
+		remainingTraversals := uint(linux.MaxSymlinkTraversals)
+		if resolve {
+			log.Infof("Resolving horiz!")
+			d, _ = t.MountNamespace().FindInode(t, layer, rel, path, &remainingTraversals)
+			log.Infof("Done resolving")
+		} else {
+			log.Infof("Linking hoiz!")
+			d, _ = t.MountNamespace().FindLink(t, layer, rel, path, &remainingTraversals)
+		}
+
+		if (d != nil) {
+			return d
+		}
+	}
+	return nil
+	
 }
 
 // copyInPath copies a path in.

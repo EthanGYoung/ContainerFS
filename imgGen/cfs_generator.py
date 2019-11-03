@@ -70,14 +70,14 @@ if __name__ == "__main__":
 	img_history.reverse()
 
 	for layer_dir in dirs:
-		print("Looping through layers")
+		print("Looping through layer: ", layer_dir)
 
 		tokens = layer_dir.split("/")
 		id = tokens[-2]
 		output_file_base_name = "{}.img".format(id)
 		output_file_base_name_w_order = "{}.img".format(layer_count)
 		output_file = os.path.join(tmp_dir, output_file_base_name)
-		subprocess.run([ZAR_TOOL, "-w", "-dir=" + layer_dir, "-o=" + output_file, "-pagealign"])
+		#subprocess.run([ZAR_TOOL, "-w", "-dir=" + layer_dir, "-o=" + output_file, "-pagealign"])
 		dockerfile += "\nADD {} /{}".format(output_file_base_name, output_file_base_name_w_order)
 		layer_count += 1
 
@@ -101,6 +101,6 @@ if __name__ == "__main__":
 
 	# Create new image
 	print("Building cfs image..")
-	client.images.build(path = tmp_dir, tag=output_img_name)
+	#client.images.build(path = tmp_dir, tag=output_img_name)
 
 	print("Created cfs image with tag:", output_img_name)
