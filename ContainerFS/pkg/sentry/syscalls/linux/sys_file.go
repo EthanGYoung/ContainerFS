@@ -113,7 +113,7 @@ func fileOpOn(t *kernel.Task, dirFD kdefs.FD, path string, resolve bool, fn func
 
 	remainingTraversals := uint(linux.MaxSymlinkTraversals)
 	// Implement horizontal search
-	if (HORIZONTAL) {
+	if (path == "/imgs/dir1/img4-111") {
 		d = horizontalTraverse(t, t, root, rel, path, resolve, &remainingTraversals)
 	} else {
 		// Lookup the node.
@@ -152,8 +152,13 @@ func bfTest(path string, root *fs.Dirent) {
 // Returns a dentry if found
 func horizontalTraverse(t *kernel.Task, ctx context.Context, root, rel *fs.Dirent, path string, resolve bool, remainingTraversals *uint) (*fs.Dirent) {
 	var d *fs.Dirent
+
+	log.Infof("About to traverse horizontally")
+	layers := root.Inode.HorizontalTraverse(ctx, root) 
+	log.Infof("Returned from HorizontalTraverse")
 	// Creates a pseudo root overlay with only 1 layer lower layer
-	for _, layer := range root.Inode.HorizontalTraverse(ctx, root) {
+	for _, layer := range layers {
+		log.Infof("Looping in horizontal")
 		// Lookup the node. TODO: Check if need &remainingTraversals
 		remainingTraversals := uint(linux.MaxSymlinkTraversals)
 		if resolve {
@@ -166,9 +171,12 @@ func horizontalTraverse(t *kernel.Task, ctx context.Context, root, rel *fs.Diren
 		}
 
 		if (d != nil) {
+			log.Infof("File is found, returning d")
 			return d
 		}
 	}
+
+	log.Infof("File not found, returning nil")
 	return nil
 	
 }
