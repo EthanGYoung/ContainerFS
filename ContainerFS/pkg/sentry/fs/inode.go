@@ -117,7 +117,9 @@ func (i *Inode) HorizontalTraverse(ctx context.Context, root *Dirent) []*Dirent 
 	log.Infof("HorizontalTraverse")
 
 	curr := i.overlay.lower
-
+	pseudo := NewInode(curr.InodeOperations, NewPseudoMountSource(), curr.StableAttr) // Inode used as lower on all, which is not used (not overlay)
+	
+	//pseudo.overlay = nil
 	// Assuming atleast upper or lower, check later
 	for {
 		
@@ -132,11 +134,17 @@ func (i *Inode) HorizontalTraverse(ctx context.Context, root *Dirent) []*Dirent 
 		// Do case
 		if (root.Inode.overlay.upper != nil && !upper) {
 			log.Infof("Checking upper horizontally")
-			tmp = NewPseudoOverlayInode(ctx, i.overlay.upper, root.Inode.MountSource)
+			//tmp = NewPseudoOverlayInode(ctx, i.overlay.upper, root.Inode.MountSource)
+			tmp = NewPseudoOverlayInode(ctx, pseudo, root.Inode.MountSource)
+			tmp.overlay.upper = i.overlay.upper
+			tmp.overlay.lower = nil
 			upper = true 
 		} else {
 			log.Infof("Checking lower horizontally")
-			tmp = NewPseudoOverlayInode(ctx, curr.overlay.upper, root.Inode.MountSource)
+			//tmp = NewPseudoOverlayInode(ctx, curr.overlay.upper, root.Inode.MountSource)
+			tmp = NewPseudoOverlayInode(ctx, pseudo, root.Inode.MountSource)
+			tmp.overlay.upper = curr.overlay.upper
+			tmp.overlay.lower = nil
 			// d = tmp.lookupLayer(t, ctx, NewDirent(tmp, root.name), wd, path, remainingTraversals, resolve)	
 			curr = curr.overlay.lower
 		}
