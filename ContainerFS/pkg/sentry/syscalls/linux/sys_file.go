@@ -114,8 +114,13 @@ func fileOpOn(t *kernel.Task, dirFD kdefs.FD, path string, resolve bool, fn func
 	remainingTraversals := uint(linux.MaxSymlinkTraversals)
 	// Implement horizontal search
 	if (path == "/imgs/dir1/img4-111") {
-		d = horizontalTraverse(t, t, root, rel, path, resolve, &remainingTraversals)
+		d = horizontalTraverse(t, t, root, rel, path, resolve, &remainingTraversals, false)
+	} else if (path == "/imgs/dir1/img4-112") {
+		// Both horizontal and BF
+		d = horizontalTraverse(t, t, root, rel, path, resolve, &remainingTraversals, true)
 	} else {
+
+	
 		// Lookup the node.
 		if resolve {
 			log.Infof("Resolving!")
@@ -150,7 +155,7 @@ func bfTest(path string, root *fs.Dirent) {
 }
 
 // Returns a dentry if found
-func horizontalTraverse(t *kernel.Task, ctx context.Context, root, rel *fs.Dirent, path string, resolve bool, remainingTraversals *uint) (*fs.Dirent) {
+func horizontalTraverse(t *kernel.Task, ctx context.Context, root, rel *fs.Dirent, path string, resolve bool, remainingTraversals *uint, bf bool) (*fs.Dirent) {
 	var d *fs.Dirent
 
 	log.Infof("About to traverse horizontally")
@@ -159,6 +164,13 @@ func horizontalTraverse(t *kernel.Task, ctx context.Context, root, rel *fs.Diren
 	// Creates a pseudo root overlay with only 1 layer lower layer
 	for _, layer := range layers {
 		log.Infof("Looping in horizontal")
+
+		if (bf) {
+			// Test with bloom filter first
+			if (!fs.CheckBFLayer(layer.Inode, path)) {
+				continue
+			}
+		}
 		// Lookup the node. TODO: Check if need &remainingTraversals
 		remainingTraversals := uint(linux.MaxSymlinkTraversals)
 		if resolve {
