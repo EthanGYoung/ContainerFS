@@ -25,6 +25,7 @@ ContainerFS/.settings
 ContainerFS/WORKSPACE.user.bzl
 ContainerFS/bazel-*
 ContainerFS/output/
+img*
 
 *.img
 imgGen/go

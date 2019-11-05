@@ -72,11 +72,15 @@ func (i *Inode) CheckOverlay(path string) (*Inode)  {
 	if (u != nil) {
 		log.Infof("Upper in msrc: " + u.MountSource.name)
 		if (strings.Contains(u.MountSource.name, "imgfs")) {
+			i.overlay.bf_check = true
 			if (!CheckBF(u, path)) {
 				// Path not in layer
 				// TODO: Does this erase for subsequent lookups, too? Like will all other lookups in root not check this layer
 				//		- Possibly, need to manipulate the dirents (in-mem) and not the inodes
-				i.overlay.upper = nil
+				//		- YES
+				i.overlay.traverse = false
+			} else {
+				i.overlay.traverse = true
 			}
 		}
 	}

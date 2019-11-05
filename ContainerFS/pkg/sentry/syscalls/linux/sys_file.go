@@ -16,6 +16,7 @@ package linux
 
 import (
 	"io"
+	"strings"
 	"syscall"
 
 	"gvisor.googlesource.com/gvisor/pkg/abi/linux"
@@ -106,16 +107,16 @@ func fileOpOn(t *kernel.Task, dirFD kdefs.FD, path string, resolve bool, fn func
 	root := t.FSContext().RootDirectory()
 
 	// Update root with BF results
-	if (path == "/imgs/dir2/img8-8563") {
+	if (strings.Contains(path, "img") && false) {
 		// TODO: Change this to return a dirent or just change to modify root (use is subsequent steps)
 		bfTest(path, root)
 	}
 
 	remainingTraversals := uint(linux.MaxSymlinkTraversals)
 	// Implement horizontal search
-	if (path == "/imgs/dir1/img4-111") {
+	if (strings.Contains(path, "img") && false) {
 		d = horizontalTraverse(t, t, root, rel, path, resolve, &remainingTraversals, false)
-	} else if (path == "/imgs/dir1/img4-112") {
+	} else if (strings.Contains(path, "img") && true) {
 		// Both horizontal and BF
 		d = horizontalTraverse(t, t, root, rel, path, resolve, &remainingTraversals, true)
 	} else {

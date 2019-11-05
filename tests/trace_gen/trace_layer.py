@@ -115,7 +115,8 @@ if __name__== "__main__":
 				if ("TRACE" in line):
 					lines.append(line[:len(line)-1])
 				
-				line = f.readline() 
+				line = f.readline()
+			
 			trace(lines, args.path)			
 		else:	
 			line = f.readline()

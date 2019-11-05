@@ -111,20 +111,24 @@ func (b *BloomFilter) TestElement(elem []byte) bool {
 	intHash := h1
 
 	// TODO: Look into this, may be perf issue..
-	var testFilter = make([]bool, b.FilterSize)
+	//var testFilter = make([]bool, b.FilterSize)
 
 	// Create a test bit array
-	copy(testFilter, b.BitSet)
+	//copy(testFilter, b.BitSet)
 
 	// Set bits in bitset to represent added element
 	for i:=0; i < int(b.NumHashes); i++ {
 		intHash += (b.NumHashes*h2)
 		bitToSet := intHash % b.FilterSize
-		testFilter[bitToSet] = true
+
+		// Check if bitset in filter
+		if (!b.BitSet[bitToSet]) {
+			return false
+		}
 	}
 
 	// Test if found by checking that all bits set are same as original
-	return b.checkBitSetEquality(testFilter)
+	return true
 }
 
 // checkBitSetEquality checks if a test bloom filter equals the current bloom filter

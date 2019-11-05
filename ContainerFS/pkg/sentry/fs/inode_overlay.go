@@ -69,59 +69,61 @@ func overlayLookup(ctx context.Context, parent *overlayEntry, inode *Inode, name
 
 	// Does the parent directory exist in the upper file system?
 	if parent.upper != nil {
-		log.Infof("Checking in upper fs: " + parent.upper.MountSource.name)
-		log.Infof("TRACE-layer_lookup-" + parent.upper.MountSource.name)
-		// First check if a file object exists in the upper file system.
-		// A file could have been created over a whiteout, so we need to
-		// check if something exists in the upper file system first.
-		child, err := parent.upper.Lookup(ctx, name)
-		log.Infof("Lookup complete in parent")
-		if err != nil && err != syserror.ENOENT {
-			log.Infof("Error on overlay lookup")
-			// We encountered an error that an overlay cannot handle,
-			// we must propagate it to the caller.
-			parent.copyMu.RUnlock()
-			return nil, false, err
-		}
-		if child != nil {
-			if child.IsNegative() {
-				negativeUpperChild = true
-			} else {
-				log.Infof("TRACE-lookup_match-" + child.Inode.MountSource.name)
-				log.Infof("Found upper inode: " + child.Inode.MountSource.name)
-				upperInode = child.Inode
-				upperInode.IncRef()
-			}
-			child.DecRef()
-		}
-
-		// Are we done?
-		if overlayHasWhiteout(parent.upper, name) {
-			if upperInode == nil {
-				parent.copyMu.RUnlock()
-				if negativeUpperChild {
-					// If the upper fs returnd a negative
-					// Dirent, then the upper is OK with
-					// that negative Dirent being cached in
-					// the Dirent tree, so we can return
-					// one from the overlay.
-					return NewNegativeDirent(name), false, nil
-				}
-				// Upper fs is not OK with a negative Dirent
-				// being cached in the Dirent tree, so don't
-				// return one.
-				return nil, false, syserror.ENOENT
-			}
-			entry, err := newOverlayEntry(ctx, upperInode, nil, false)
-			if err != nil {
-				// Don't leak resources.
-				upperInode.DecRef()
+		if ((parent.bf_check && parent.traverse) || !parent.bf_check) {
+			log.Infof("Checking in upper fs: " + parent.upper.MountSource.name)
+			log.Infof("TRACE-layer_lookup-" + parent.upper.MountSource.name)
+			// First check if a file object exists in the upper file system.
+			// A file could have been created over a whiteout, so we need to
+			// check if something exists in the upper file system first.
+			child, err := parent.upper.Lookup(ctx, name)
+			log.Infof("Lookup complete in parent")
+			if err != nil && err != syserror.ENOENT {
+				log.Infof("Error on overlay lookup")
+				// We encountered an error that an overlay cannot handle,
+				// we must propagate it to the caller.
 				parent.copyMu.RUnlock()
 				return nil, false, err
 			}
-			d, err := NewDirent(newOverlayInode(ctx, entry, inode.MountSource), name), nil
-			parent.copyMu.RUnlock()
-			return d, true, err
+			if child != nil {
+				if child.IsNegative() {
+					negativeUpperChild = true
+				} else {
+					log.Infof("TRACE-lookup_match-" + child.Inode.MountSource.name)
+					log.Infof("Found upper inode: " + child.Inode.MountSource.name)
+					upperInode = child.Inode
+					upperInode.IncRef()
+				}
+				child.DecRef()
+			}
+
+			// Are we done?
+			if overlayHasWhiteout(parent.upper, name) {
+				if upperInode == nil {
+					parent.copyMu.RUnlock()
+					if negativeUpperChild {
+						// If the upper fs returnd a negative
+						// Dirent, then the upper is OK with
+						// that negative Dirent being cached in
+						// the Dirent tree, so we can return
+						// one from the overlay.
+						return NewNegativeDirent(name), false, nil
+					}
+					// Upper fs is not OK with a negative Dirent
+					// being cached in the Dirent tree, so don't
+					// return one.
+					return nil, false, syserror.ENOENT
+				}
+				entry, err := newOverlayEntry(ctx, upperInode, nil, false)
+				if err != nil {
+					// Don't leak resources.
+					upperInode.DecRef()
+					parent.copyMu.RUnlock()
+					return nil, false, err
+				}
+				d, err := NewDirent(newOverlayInode(ctx, entry, inode.MountSource), name), nil
+				parent.copyMu.RUnlock()
+				return d, true, err
+			}
 		}
 	}
 

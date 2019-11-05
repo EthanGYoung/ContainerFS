@@ -203,6 +203,10 @@ type overlayEntry struct {
 	// is required to mutate it.
 	upper *Inode
 
+	bf_check bool
+
+	traverse bool
+
 }
 
 
