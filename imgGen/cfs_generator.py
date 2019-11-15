@@ -12,7 +12,7 @@ import sys
 # e.g. sudo python3 cfs_generator.py -p ubuntu-cfs ubuntu
 # e.g. sudo python3 cfs_generator.py -c test-cfs /usr/bin/
 
-ZAR_TOOL = "./main"
+ZAR_TOOL = "./main-bf"
 dockerfile = "FROM scratch"
 client = docker.from_env()
 
