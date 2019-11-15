@@ -18,8 +18,8 @@ if __name__== "__main__":
 	paths = []
 	print("Generating paths")
 	# Open all files in imgfs layers - In future do random? - Create array with look and then randomize
-	for i in range(0,3):
-		for j in range(0,1000):
+	for i in range(0,5):
+		for j in range(0,500):
 			component = "img" + str(i) + "-" + str(j)
 			path = "/" + component + "/" + component + "/" + component + "/" + component
 			paths.append(path)
